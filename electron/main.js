@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow } = require("electron");
 const path = require("path");
 
 function createWindow() {
@@ -10,7 +10,7 @@ function createWindow() {
     },
   });
 
-  // React frontend sunucudan çalışıyor
+  // Sunucudaki frontend'e bağlan
   win.loadURL("http://185.149.103.223:3001");
 }
 
