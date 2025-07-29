@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useContext } from "react";
 import socket from "../socket"; // 📡 socket bağlantısı
 
 export const AuthContext = createContext();
@@ -20,20 +20,15 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  // Login olduğunda:
   const login = (userData) => {
     setUser(userData);
     localStorage.setItem("user", JSON.stringify(userData));
-
-    // 📡 Socket ile kullanıcı online bildir
     socket.emit("userOnline", userData._id);
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem("user");
-
-    // 🔌 Bağlantıyı kes
     socket.disconnect();
   };
 
@@ -42,4 +37,9 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+// ✅ Eksik olan satır — bunu ekle:
+export function useAuth() {
+  return useContext(AuthContext);
 }
