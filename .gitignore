@@ -2,3 +2,5 @@ dist/
 *.AppImage
 *.snap
 *.asar
+dist/
+node_modules/
