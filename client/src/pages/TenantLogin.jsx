@@ -1,27 +1,28 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "../api/axios";
 
 export default function TenantLogin() {
   const [tenant, setTenant] = useState("");
-  const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     const trimmed = tenant.trim().toLowerCase();
 
     if (!trimmed) return alert("İşletme adı girin");
 
-    const domain = `https://${trimmed}.emrcore.com.tr`;
-    localStorage.setItem("tenant_url", domain);
+    const fullDomain = `https://${trimmed}.cafe.emrcore.com.tr`;
 
-    try {
-      // BaseURL ayarlı olmayan özel istek (axios.get direkt kullanıldı)
-      await axios.get(`${domain}/api/ping`);
-      navigate("/login");
-    } catch (err) {
-      alert(`Sunucuya bağlanılamadı: ${domain}`);
-    }
+    // Ping atarak kontrol etmek istersen (isteğe bağlı):
+    fetch(`${fullDomain}/api/ping`)
+      .then((res) => {
+        if (res.ok) {
+          window.location.href = fullDomain; // ✅ Gerçek subdomaine yönlendir
+        } else {
+          alert("Sunucuya ulaşılamadı.");
+        }
+      })
+      .catch(() => {
+        alert("Bağlantı hatası! Sunucu çalışıyor mu?");
+      });
   };
 
   return (
@@ -42,7 +43,7 @@ export default function TenantLogin() {
           type="submit"
           className="w-full bg-emerald-500 hover:bg-emerald-600 p-2 rounded"
         >
-          Devam Et
+          Giriş Yap
         </button>
       </form>
     </div>

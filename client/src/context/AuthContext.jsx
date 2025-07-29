@@ -7,28 +7,19 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Kullanıcıyı localStorage'dan yükle
+  // Otomatik giriş devre dışı bırakıldı
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-
-      // 📡 Kullanıcı online bildirimi gönder
-      socket.emit("userOnline", parsedUser._id);
-    }
-    setLoading(false);
+    setLoading(false); // Her zaman login ekranından başlasın
   }, []);
 
   const login = (userData) => {
     setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
+    // ❌ localStorage kaldırıldı
     socket.emit("userOnline", userData._id);
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("user");
     socket.disconnect();
   };
 
@@ -39,7 +30,7 @@ export function AuthProvider({ children }) {
   );
 }
 
-// ✅ Eksik olan satır — bunu ekle:
+// ✅ Dışarıdan kullanıcı bilgisine erişmek için
 export function useAuth() {
   return useContext(AuthContext);
 }

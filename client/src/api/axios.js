@@ -1,16 +1,14 @@
 import axios from "axios";
 
 const getBaseURL = () => {
-  const saved = localStorage.getItem("tenant_url");
-  if (saved) return saved + "/api";
-
-  // Eðer .cafe.emrcore.com.tr altýndaysa subdomain çýkar
   const host = window.location.hostname;
+
+  // Eðer subdomain yapýsý doðruysa: örn. x.cafe.emrcore.com.tr
   if (host.endsWith(".cafe.emrcore.com.tr")) {
     return `https://${host}/api`;
   }
 
-  return "/api"; // fallback
+  return "/api"; // fallback (localhost gibi durumlar)
 };
 
 const instance = axios.create({

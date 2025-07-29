@@ -1,54 +1,57 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
+import axios from "../api/axios"; // 🔁 socket ve interceptor destekli axios
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import axios from "../api/axios";
 import toast from "react-hot-toast";
+import DarkModeToggle from "../components/DarkModeToggle";
 
-export default function Login() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const { login } = useAuth(); // ✅ Güncel kullanım
+export default function LoginPage() {
+  const { login } = useContext(AuthContext);
+  const [form, setForm] = useState({ username: "", password: "" });
   const navigate = useNavigate();
+
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!username.trim() || !password.trim()) {
-      toast.error("Kullanıcı adı ve şifre gerekli");
-      return;
-    }
-
     try {
-      const res = await axios.post("/login", { username, password });
-      login(res.data.user);
-      toast.success("Giriş başarılı");
-      navigate("/tables"); // ✅ yönlendirme başarılı giriş sonrası
+      const res = await axios.post("/login", form); // ✅ IP yok, otomatik çalışır
+      login(res.data);
+      toast.success("Giriş başarılı!");
+      navigate("/tables");
     } catch (err) {
-      toast.error("Giriş başarısız");
+      toast.error("Kullanıcı adı veya şifre hatalı");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
-      <form onSubmit={handleSubmit} className="bg-slate-800 p-8 rounded shadow max-w-sm w-full">
-        <h2 className="text-xl mb-4 font-semibold text-center">Giriş</h2>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white dark:bg-gray-800 p-6 rounded shadow w-80"
+      >
+        <h2 className="text-lg font-bold mb-4 text-center dark:text-white">EMR CAFE GİRİŞ</h2>
         <input
           type="text"
-          placeholder="Kullanıcı Adı"
-          className="w-full p-2 mb-4 rounded bg-slate-700 text-white"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          name="username"
+          placeholder="Kullanıcı adı"
+          className="w-full mb-2 p-2 border rounded dark:bg-gray-700 dark:text-white"
+          onChange={handleChange}
+          required
         />
         <input
           type="password"
+          name="password"
           placeholder="Şifre"
-          className="w-full p-2 mb-4 rounded bg-slate-700 text-white"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          className="w-full mb-4 p-2 border rounded dark:bg-gray-700 dark:text-white"
+          onChange={handleChange}
+          required
         />
-        <button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600 p-2 rounded">
-          Giriş Yap
-        </button>
+        <button className="bg-blue-600 w-full text-white py-2 rounded hover:bg-blue-700 transition">Giriş</button>
+        <div className="mt-4 flex justify-center">
+          <DarkModeToggle />
+        </div>
       </form>
     </div>
   );
