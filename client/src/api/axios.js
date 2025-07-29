@@ -1,17 +1,29 @@
 import axios from "axios";
 
-// ? Sunucunun bulunduðu subdomain üzerinden baðlanýr
+const getBaseURL = () => {
+  const saved = localStorage.getItem("tenant_url");
+  if (saved) return saved + "/api";
+
+  // Eðer .cafe.emrcore.com.tr altýndaysa subdomain çýkar
+  const host = window.location.hostname;
+  if (host.endsWith(".cafe.emrcore.com.tr")) {
+    return `https://${host}/api`;
+  }
+
+  return "/api"; // fallback
+};
+
 const instance = axios.create({
-  baseURL: "/api",
+  baseURL: getBaseURL(),
 });
 
 instance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 403) {
-      window.location.href = "/subscription-expired"; // abonelik bitmiþse
+  (res) => res,
+  (err) => {
+    if (err?.response?.status === 403) {
+      window.location.href = "/subscription-expired";
     }
-    return Promise.reject(error);
+    return Promise.reject(err);
   }
 );
 
