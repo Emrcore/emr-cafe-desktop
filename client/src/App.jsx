@@ -15,7 +15,7 @@ import Settings from "./pages/Settings";
 import Report from "./pages/Report";
 import Login from "./pages/Login";
 import MobileNav from "./components/MobileNav";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider } from "./context/AuthContext";
 import RequireAuth from "./components/RequireAuth";
 import AdminTables from "./pages/AdminTables";
 import SubscriptionExpired from "./pages/SubscriptionExpired";
@@ -26,25 +26,6 @@ import ReportAdvanced from "./pages/ReportAdvanced";
 import ToasterProvider from "./components/ToasterProvider";
 import toast from "react-hot-toast";
 import TenantLogin from "./pages/TenantLogin";
-
-function RedirectToTenantIfNeeded() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const tenant = localStorage.getItem("tenant_url");
-    const user = localStorage.getItem("user");
-
-    if (!tenant) {
-      navigate("/tenant", { replace: true });
-    } else if (!user) {
-      navigate("/login", { replace: true });
-    } else {
-      navigate("/", { replace: true });
-    }
-  }, []);
-
-  return null;
-}
 
 function AppRoutes() {
   const location = useLocation();
@@ -72,18 +53,17 @@ function AppRoutes() {
   return (
     <div className="pb-16 min-h-screen bg-gray-50 dark:bg-gray-900">
       <Routes>
-        <Route path="/" element={<RedirectToTenantIfNeeded />} />
         <Route path="/tenant" element={<TenantLogin />} />
         <Route path="/login" element={<Login />} />
         <Route path="/subscription-expired" element={<SubscriptionExpired />} />
-        <Route path="/menu" element={<Menu />} /> {/* 👈 Herkese açık */}
+        <Route path="/menu" element={<Menu />} /> {/* herkese açık */}
 
         {/* Giriş gerektiren sayfalar */}
         <Route
-          path="/report-advanced"
+          path="/"
           element={
             <RequireAuth>
-              <ReportAdvanced />
+              <Tables />
             </RequireAuth>
           }
         />
@@ -152,10 +132,10 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/"
+          path="/report-advanced"
           element={
             <RequireAuth>
-              <Tables />
+              <ReportAdvanced />
             </RequireAuth>
           }
         />
@@ -174,6 +154,20 @@ function AppRoutes() {
 }
 
 export default function App() {
+  const tenant = localStorage.getItem("tenant_url");
+  const user = localStorage.getItem("user");
+  const isMenu = window.location.pathname === "/menu";
+
+  if (!tenant && !isMenu && window.location.pathname !== "/tenant") {
+    window.location.href = "/tenant";
+    return null;
+  }
+
+  if (tenant && !user && !isMenu && window.location.pathname !== "/login") {
+    window.location.href = "/login";
+    return null;
+  }
+
   return (
     <AuthProvider>
       <Router>
