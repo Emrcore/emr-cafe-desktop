@@ -62,7 +62,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "emrhancore",
+        "owner": "emrcore",
         "repo": "emr-cafe-desktop"
       }
     ],
