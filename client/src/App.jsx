@@ -4,16 +4,17 @@ import {
   Routes,
   Route,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
-import Tables from "./pages/Tables.jsx";
-import AdminImages from "./pages/AdminImages.jsx";
-import TableDetail from "./pages/TableDetail.jsx";
-import UserManagement from "./pages/UserManagement.jsx";
-import Settings from "./pages/Settings.jsx";
-import Report from "./pages/Report.jsx";
-import Login from "./pages/Login.jsx";
-import MobileNav from "./components/MobileNav.jsx";
-import { AuthProvider } from "./context/AuthContext";
+import Tables from "./pages/Tables";
+import AdminImages from "./pages/AdminImages";
+import TableDetail from "./pages/TableDetail";
+import UserManagement from "./pages/UserManagement";
+import Settings from "./pages/Settings";
+import Report from "./pages/Report";
+import Login from "./pages/Login";
+import MobileNav from "./components/MobileNav";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import RequireAuth from "./components/RequireAuth";
 import AdminTables from "./pages/AdminTables";
 import SubscriptionExpired from "./pages/SubscriptionExpired";
@@ -28,21 +29,18 @@ import TenantLogin from "./pages/TenantLogin";
 function AppRoutes() {
   const location = useLocation();
   const hideNav = ["/login", "/tenant"].includes(location.pathname);
+  const { user } = useAuth();
 
   useEffect(() => {
     const api = window.electronAPI;
     if (api?.onUpdateAvailable) {
-      api.onUpdateAvailable(() => {
-        toast("Yeni güncelleme mevcut. İndiriliyor...");
-      });
+      api.onUpdateAvailable(() => toast("Yeni güncelleme mevcut. İndiriliyor..."));
     }
 
     if (api?.onUpdateDownloaded) {
       api.onUpdateDownloaded(() => {
         toast.success("Güncelleme indirildi. Uygulama yeniden başlatılıyor...");
-        setTimeout(() => {
-          api.quitAndInstall?.();
-        }, 3000);
+        setTimeout(() => api.quitAndInstall?.(), 3000);
       });
     }
   }, []);
@@ -71,18 +69,28 @@ function AppRoutes() {
   );
 }
 
-export default function App() {
+function TenantAndLoginRedirect() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const tenant = localStorage.getItem("tenant_url");
 
-  if (!tenant && window.location.pathname !== "/tenant") {
-    window.location.href = "/tenant";
-    return null;
-  }
+  useEffect(() => {
+    if (!tenant) {
+      navigate("/tenant");
+    } else if (!user) {
+      navigate("/login");
+    }
+  }, [tenant, user, navigate]);
 
+  return null;
+}
+
+export default function App() {
   return (
     <AuthProvider>
       <Router>
         <ToasterProvider />
+        <TenantAndLoginRedirect />
         <AppRoutes />
       </Router>
     </AuthProvider>
