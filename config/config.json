@@ -1,0 +1,5 @@
+{
+  "lisansKey": "EMR-001-ABCDE-12345",
+  "cihazId": "cafe-pc-01",
+  "cloudApi": "https://lisans.emrcore.com/api/check-license"
+}

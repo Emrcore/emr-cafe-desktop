@@ -1,0 +1,87 @@
+{
+  "name": "emr-cafe",
+  "version": "1.0.1",
+  "description": "Cafe adisyon sistemi",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "start": "node server/server.js",
+    "electron": "concurrently \"npm run start\" \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "build": "cd client && npm run build",
+    "package": "electron-builder",
+    "publish": "electron-builder --publish always"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "bcryptjs": "^3.0.2",
+    "concurrently": "^8.0.1",
+    "cors": "^2.8.5",
+    "electron-updater": "^6.1.0",
+    "express": "^4.18.2",
+    "mongoose": "^8.16.4",
+    "multer": "^2.0.2",
+    "node": "^20.19.4",
+    "pdfkit": "^0.13.0",
+    "socket.io": "^4.7.2",
+    "uuid": "^11.1.0",
+    "vite": "^5.2.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.1.0",
+    "autoprefixer": "^10.4.21",
+    "electron": "^28.1.3",
+    "electron-builder": "^24.13.3",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.11",
+    "wait-on": "^8.0.3"
+  },
+  "build": {
+    "appId": "com.emrcafe.desktop",
+    "productName": "EMR Cafe",
+    "files": [
+      "electron/**/*",
+      "server/**/*",
+      "client/dist/**/*",
+      "config/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "invoices/",
+        "to": "invoices"
+      },
+      {
+        "from": "uploads/",
+        "to": "uploads"
+      }
+    ],
+    "directories": {
+      "buildResources": "assets",
+      "output": "dist"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "emrhancore",
+        "repo": "emr-cafe-desktop"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "keywords": [],
+  "author": "EMR CORE",
+  "license": "MIT"
+}

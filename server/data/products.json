@@ -1,0 +1,21 @@
+[
+  {
+    "id": "1",
+    "name": "Türk Kahvesi",
+    "price": 35,
+    "category": "Sıcak İçecekler",
+    "image": "/uploads/1752915188368-3006.jpg"
+  },
+  {
+    "id": "2",
+    "name": "Meyve Suyu",
+    "price": 25,
+    "category": "Soğuk İçecekler"
+  },
+  {
+    "id": "3377e511-eb44-462b-b05a-20bfeffdf1a5",
+    "name": "Tost",
+    "price": 100,
+    "category": "yemek"
+  }
+]

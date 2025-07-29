@@ -1,0 +1,20 @@
+[
+  {
+    "id": "1",
+    "name": "Masa 1",
+    "status": "empty",
+    "orders": []
+  },
+  {
+    "id": "2",
+    "name": "Masa 2",
+    "status": "empty",
+    "orders": []
+  },
+  {
+    "id": "c3427869-c3a2-4c3d-91a2-b78c5a5c14a7",
+    "name": "Masa 3",
+    "status": "empty",
+    "orders": []
+  }
+]

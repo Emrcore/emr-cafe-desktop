@@ -1,0 +1,239 @@
+[
+  {
+    "tableId": "1",
+    "orders": [],
+    "total": 35,
+    "paymentMethod": "kart",
+    "date": "2025-07-19T08:22:56.629Z"
+  },
+  {
+    "tableId": "1",
+    "orders": [
+      {
+        "id": "1",
+        "name": "Türk Kahvesi",
+        "price": 35,
+        "category": "Sıcak İçecekler",
+        "qty": 1
+      }
+    ],
+    "total": 35,
+    "paymentMethod": "nakit",
+    "date": "2025-07-19T08:29:44.011Z"
+  },
+  {
+    "tableId": "2",
+    "orders": [
+      {
+        "id": "2",
+        "name": "Meyve Suyu",
+        "price": 25,
+        "category": "Soğuk İçecekler",
+        "qty": 1
+      }
+    ],
+    "total": 25,
+    "paymentMethod": "kart",
+    "date": "2025-07-19T08:29:52.055Z"
+  },
+  {
+    "tableId": "1",
+    "orders": [
+      {
+        "id": "1",
+        "name": "Türk Kahvesi",
+        "price": 35,
+        "category": "Sıcak İçecekler",
+        "qty": 2
+      },
+      {
+        "id": "2",
+        "name": "Meyve Suyu",
+        "price": 25,
+        "category": "Soğuk İçecekler",
+        "qty": 1
+      }
+    ],
+    "total": 95,
+    "paymentMethod": "kart",
+    "date": "2025-07-19T08:32:20.483Z"
+  },
+  {
+    "tableId": "1",
+    "orders": [
+      {
+        "id": "1",
+        "name": "Türk Kahvesi",
+        "price": 35,
+        "category": "Sıcak İçecekler",
+        "image": "/uploads/1752915188368-3006.jpg",
+        "qty": 1
+      }
+    ],
+    "total": 35,
+    "paymentMethod": "nakit",
+    "date": "2025-07-21T19:42:38.910Z"
+  },
+  {
+    "tableId": "1",
+    "orders": [
+      {
+        "id": "1",
+        "name": "Türk Kahvesi",
+        "price": 35,
+        "category": "Sıcak İçecekler",
+        "image": "/uploads/1752915188368-3006.jpg",
+        "qty": 1
+      }
+    ],
+    "total": 35,
+    "paymentMethod": "nakit",
+    "date": "2025-07-21T19:44:47.858Z"
+  },
+  {
+    "tableId": "1",
+    "orders": [
+      {
+        "id": "1",
+        "name": "Türk Kahvesi",
+        "price": 35,
+        "category": "Sıcak İçecekler",
+        "image": "/uploads/1752915188368-3006.jpg",
+        "qty": 1
+      }
+    ],
+    "total": 35,
+    "paymentMethod": "nakit",
+    "date": "2025-07-22T18:13:05.233Z"
+  },
+  {
+    "tableId": "2",
+    "orders": [
+      {
+        "id": "1",
+        "name": "Türk Kahvesi",
+        "price": 35,
+        "category": "Sıcak İçecekler",
+        "image": "/uploads/1752915188368-3006.jpg",
+        "qty": 1
+      },
+      {
+        "id": "3377e511-eb44-462b-b05a-20bfeffdf1a5",
+        "name": "Tost",
+        "price": 100,
+        "category": "yemek",
+        "qty": 1
+      },
+      {
+        "id": "2",
+        "name": "Meyve Suyu",
+        "price": 25,
+        "category": "Soğuk İçecekler",
+        "qty": 1
+      }
+    ],
+    "total": 160,
+    "paymentMethod": "nakit",
+    "date": "2025-07-22T18:13:33.090Z"
+  },
+  {
+    "tableId": "1",
+    "orders": [
+      {
+        "id": "1",
+        "name": "Türk Kahvesi",
+        "price": 35,
+        "category": "Sıcak İçecekler",
+        "image": "/uploads/1752915188368-3006.jpg",
+        "qty": 1
+      }
+    ],
+    "total": 35,
+    "paymentMethod": "nakit",
+    "date": "2025-07-23T17:29:02.156Z"
+  },
+  {
+    "tableId": "1",
+    "orders": [
+      {
+        "id": "1",
+        "name": "Türk Kahvesi",
+        "price": 35,
+        "category": "Sıcak İçecekler",
+        "image": "/uploads/1752915188368-3006.jpg",
+        "qty": 1
+      }
+    ],
+    "total": 35,
+    "paymentMethod": "nakit",
+    "date": "2025-07-23T17:29:50.969Z"
+  },
+  {
+    "tableId": "2",
+    "orders": [
+      {
+        "id": "3377e511-eb44-462b-b05a-20bfeffdf1a5",
+        "name": "Tost",
+        "price": 100,
+        "category": "yemek",
+        "qty": 1
+      }
+    ],
+    "total": 100,
+    "paymentMethod": "kart",
+    "date": "2025-07-23T17:29:57.793Z"
+  },
+  {
+    "tableId": "c3427869-c3a2-4c3d-91a2-b78c5a5c14a7",
+    "orders": [
+      {
+        "id": "2",
+        "name": "Meyve Suyu",
+        "price": 25,
+        "category": "Soğuk İçecekler",
+        "qty": 1
+      },
+      {
+        "id": "1",
+        "name": "Türk Kahvesi",
+        "price": 35,
+        "category": "Sıcak İçecekler",
+        "image": "/uploads/1752915188368-3006.jpg",
+        "qty": 10
+      },
+      {
+        "id": "3377e511-eb44-462b-b05a-20bfeffdf1a5",
+        "name": "Tost",
+        "price": 100,
+        "category": "yemek",
+        "qty": 1
+      }
+    ],
+    "total": 475,
+    "paymentMethod": "nakit",
+    "date": "2025-07-23T17:30:09.151Z"
+  },
+  {
+    "tableId": "2",
+    "orders": [
+      {
+        "id": "1",
+        "name": "Türk Kahvesi",
+        "price": 35,
+        "category": "Sıcak İçecekler",
+        "image": "/uploads/1752915188368-3006.jpg",
+        "qty": 1
+      },
+      {
+        "id": "2",
+        "name": "Meyve Suyu",
+        "price": 25,
+        "category": "Soğuk İçecekler",
+        "qty": 1
+      }
+    ],
+    "total": 60,
+    "paymentMethod": "kart",
+    "date": "2025-07-23T17:30:19.590Z"
+  }
+]

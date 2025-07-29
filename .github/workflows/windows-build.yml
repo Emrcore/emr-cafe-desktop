@@ -1,0 +1,43 @@
+name: Windows Build and Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # manuel çalýþtýrmak için
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Repo'yu klonla
+        uses: actions/checkout@v3
+
+      - name: Node.js yükle
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Paketleri yükle
+        run: npm install
+
+      - name: React arayüzünü üret
+        run: npm run build
+
+      - name: Electron .exe üret
+        run: npm run package
+
+      - name: .exe dosyasýný artifact olarak kaydet
+        uses: actions/upload-artifact@v4
+        with:
+          name: emr-cafe-windows-exe
+          path: dist/*.exe
+
+      - name: GitHub Release'e yükle
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: EMR Cafe Build ${{ github.run_number }}
+          files: dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
