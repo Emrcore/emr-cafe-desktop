@@ -4,9 +4,7 @@ import {
   Routes,
   Route,
   useLocation,
-  useNavigate,
 } from "react-router-dom";
-
 import Tables from "./pages/Tables.jsx";
 import AdminImages from "./pages/AdminImages.jsx";
 import TableDetail from "./pages/TableDetail.jsx";
@@ -17,31 +15,15 @@ import Login from "./pages/Login.jsx";
 import MobileNav from "./components/MobileNav.jsx";
 import { AuthProvider } from "./context/AuthContext";
 import RequireAuth from "./components/RequireAuth";
-import AdminTables from "./pages/AdminTables.jsx";
-import SubscriptionExpired from "./pages/SubscriptionExpired.jsx";
-import AdminProducts from "./pages/AdminProducts.jsx";
-import Menu from "./pages/Menu.jsx";
-import AdminPanel from "./pages/AdminPanel.jsx";
-import ReportAdvanced from "./pages/ReportAdvanced.jsx";
-import ToasterProvider from "./components/ToasterProvider.jsx";
+import AdminTables from "./pages/AdminTables";
+import SubscriptionExpired from "./pages/SubscriptionExpired";
+import AdminProducts from "./pages/AdminProducts";
+import Menu from "./pages/Menu";
+import AdminPanel from "./pages/AdminPanel";
+import ReportAdvanced from "./pages/ReportAdvanced";
+import ToasterProvider from "./components/ToasterProvider";
 import toast from "react-hot-toast";
-import TenantLogin from "./pages/TenantLogin.jsx";
-
-function RedirectToLoginOrTenant() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const tenantURL = localStorage.getItem("tenant_url");
-
-    if (!tenantURL) {
-      navigate("/tenant");
-    } else {
-      navigate("/login");
-    }
-  }, [navigate]);
-
-  return null;
-}
+import TenantLogin from "./pages/TenantLogin";
 
 function AppRoutes() {
   const location = useLocation();
@@ -49,23 +31,25 @@ function AppRoutes() {
 
   useEffect(() => {
     const api = window.electronAPI;
+    if (api?.onUpdateAvailable) {
+      api.onUpdateAvailable(() => {
+        toast("Yeni güncelleme mevcut. İndiriliyor...");
+      });
+    }
 
-    api?.onUpdateAvailable?.(() => {
-      toast("Yeni güncelleme mevcut. İndiriliyor...");
-    });
-
-    api?.onUpdateDownloaded?.(() => {
-      toast.success("Güncelleme indirildi. Uygulama yeniden başlatılıyor...");
-      setTimeout(() => {
-        api.quitAndInstall?.();
-      }, 3000);
-    });
+    if (api?.onUpdateDownloaded) {
+      api.onUpdateDownloaded(() => {
+        toast.success("Güncelleme indirildi. Uygulama yeniden başlatılıyor...");
+        setTimeout(() => {
+          api.quitAndInstall?.();
+        }, 3000);
+      });
+    }
   }, []);
 
   return (
     <div className="pb-16 min-h-screen bg-gray-50 dark:bg-gray-900">
       <Routes>
-        <Route path="/" element={<RedirectToLoginOrTenant />} />
         <Route path="/tenant" element={<TenantLogin />} />
         <Route path="/login" element={<Login />} />
         <Route path="/subscription-expired" element={<SubscriptionExpired />} />
@@ -79,15 +63,8 @@ function AppRoutes() {
         <Route path="/admin/tables" element={<RequireAuth><AdminTables /></RequireAuth>} />
         <Route path="/admin/products" element={<RequireAuth><AdminProducts /></RequireAuth>} />
         <Route path="/admin" element={<RequireAuth><AdminPanel /></RequireAuth>} />
-        <Route path="/home" element={<RequireAuth><Tables /></RequireAuth>} />
-        <Route
-          path="*"
-          element={
-            <h1 className="p-10 text-center text-red-600 text-xl">
-              404 — Sayfa bulunamadı
-            </h1>
-          }
-        />
+        <Route path="/" element={<RequireAuth><Tables /></RequireAuth>} />
+        <Route path="*" element={<h1 className="p-10 text-center text-red-600 text-xl">404 — Sayfa bulunamadı</h1>} />
       </Routes>
       {!hideNav && <MobileNav />}
     </div>
@@ -95,6 +72,13 @@ function AppRoutes() {
 }
 
 export default function App() {
+  const tenant = localStorage.getItem("tenant_url");
+
+  if (!tenant && window.location.pathname !== "/tenant") {
+    window.location.href = "/tenant";
+    return null;
+  }
+
   return (
     <AuthProvider>
       <Router>
