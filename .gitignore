@@ -1,0 +1,4 @@
+dist/
+*.AppImage
+*.snap
+*.asar
