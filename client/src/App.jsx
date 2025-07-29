@@ -17,6 +17,7 @@ import Login from "./pages/Login";
 import MobileNav from "./components/MobileNav";
 import { AuthProvider } from "./context/AuthContext";
 import RequireAuth from "./components/RequireAuth";
+import RequireTenant from "./components/RequireTenant"; // ✅ yeni eklendi
 import AdminTables from "./pages/AdminTables";
 import SubscriptionExpired from "./pages/SubscriptionExpired";
 import AdminProducts from "./pages/AdminProducts";
@@ -56,87 +57,107 @@ function AppRoutes() {
         <Route path="/tenant" element={<TenantLogin />} />
         <Route path="/login" element={<Login />} />
         <Route path="/subscription-expired" element={<SubscriptionExpired />} />
-        <Route path="/menu" element={<Menu />} /> {/* herkese açık */}
+        <Route path="/menu" element={<Menu />} /> {/* 👈 herkese açık */}
 
-        {/* Giriş gerektiren sayfalar */}
+        {/* Tenant kontrolü gerektiren tüm yollar burada: */}
         <Route
           path="/"
           element={
-            <RequireAuth>
-              <Tables />
-            </RequireAuth>
+            <RequireTenant>
+              <RequireAuth>
+                <Tables />
+              </RequireAuth>
+            </RequireTenant>
           }
         />
         <Route
           path="/table/:id"
           element={
-            <RequireAuth>
-              <TableDetail />
-            </RequireAuth>
+            <RequireTenant>
+              <RequireAuth>
+                <TableDetail />
+              </RequireAuth>
+            </RequireTenant>
           }
         />
         <Route
           path="/users"
           element={
-            <RequireAuth>
-              <UserManagement />
-            </RequireAuth>
+            <RequireTenant>
+              <RequireAuth>
+                <UserManagement />
+              </RequireAuth>
+            </RequireTenant>
           }
         />
         <Route
           path="/settings"
           element={
-            <RequireAuth>
-              <Settings />
-            </RequireAuth>
+            <RequireTenant>
+              <RequireAuth>
+                <Settings />
+              </RequireAuth>
+            </RequireTenant>
           }
         />
         <Route
           path="/admin/images"
           element={
-            <RequireAuth>
-              <AdminImages />
-            </RequireAuth>
+            <RequireTenant>
+              <RequireAuth>
+                <AdminImages />
+              </RequireAuth>
+            </RequireTenant>
           }
         />
         <Route
           path="/report"
           element={
-            <RequireAuth>
-              <Report />
-            </RequireAuth>
+            <RequireTenant>
+              <RequireAuth>
+                <Report />
+              </RequireAuth>
+            </RequireTenant>
           }
         />
         <Route
           path="/admin/tables"
           element={
-            <RequireAuth>
-              <AdminTables />
-            </RequireAuth>
+            <RequireTenant>
+              <RequireAuth>
+                <AdminTables />
+              </RequireAuth>
+            </RequireTenant>
           }
         />
         <Route
           path="/admin/products"
           element={
-            <RequireAuth>
-              <AdminProducts />
-            </RequireAuth>
+            <RequireTenant>
+              <RequireAuth>
+                <AdminProducts />
+              </RequireAuth>
+            </RequireTenant>
           }
         />
         <Route
           path="/admin"
           element={
-            <RequireAuth>
-              <AdminPanel />
-            </RequireAuth>
+            <RequireTenant>
+              <RequireAuth>
+                <AdminPanel />
+              </RequireAuth>
+            </RequireTenant>
           }
         />
         <Route
           path="/report-advanced"
           element={
-            <RequireAuth>
-              <ReportAdvanced />
-            </RequireAuth>
+            <RequireTenant>
+              <RequireAuth>
+                <ReportAdvanced />
+              </RequireAuth>
+            </RequireTenant>
           }
         />
         <Route
@@ -154,20 +175,6 @@ function AppRoutes() {
 }
 
 export default function App() {
-  const tenant = localStorage.getItem("tenant_url");
-  const user = localStorage.getItem("user");
-  const isMenu = window.location.pathname === "/menu";
-
-  if (!tenant && !isMenu && window.location.pathname !== "/tenant") {
-    window.location.href = "/tenant";
-    return null;
-  }
-
-  if (tenant && !user && !isMenu && window.location.pathname !== "/login") {
-    window.location.href = "/login";
-    return null;
-  }
-
   return (
     <AuthProvider>
       <Router>
