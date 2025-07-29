@@ -106,7 +106,7 @@ function AppRoutes() {
             <RequireTenant>
               <RequireAuth>
                 <UserManagement />
-              </AuthProvider>
+              </RequireAuth>
             </RequireTenant>
           }
         />
