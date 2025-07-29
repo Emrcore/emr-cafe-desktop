@@ -17,7 +17,7 @@ import Login from "./pages/Login";
 import MobileNav from "./components/MobileNav";
 import { AuthProvider } from "./context/AuthContext";
 import RequireAuth from "./components/RequireAuth";
-import RequireTenant from "./components/RequireTenant"; // ✅ yeni eklendi
+import RequireTenant from "./components/RequireTenant";
 import AdminTables from "./pages/AdminTables";
 import SubscriptionExpired from "./pages/SubscriptionExpired";
 import AdminProducts from "./pages/AdminProducts";
@@ -27,6 +27,25 @@ import ReportAdvanced from "./pages/ReportAdvanced";
 import ToasterProvider from "./components/ToasterProvider";
 import toast from "react-hot-toast";
 import TenantLogin from "./pages/TenantLogin";
+
+function RedirectToStart() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const tenant = localStorage.getItem("tenant_url");
+    const user = localStorage.getItem("user");
+
+    if (!tenant) {
+      navigate("/tenant", { replace: true });
+    } else if (!user) {
+      navigate("/login", { replace: true });
+    } else {
+      navigate("/tables", { replace: true });
+    }
+  }, [navigate]);
+
+  return null;
+}
 
 function AppRoutes() {
   const location = useLocation();
@@ -54,14 +73,15 @@ function AppRoutes() {
   return (
     <div className="pb-16 min-h-screen bg-gray-50 dark:bg-gray-900">
       <Routes>
+        <Route path="/" element={<RedirectToStart />} /> {/* 🔁 giriş kontrolü */}
         <Route path="/tenant" element={<TenantLogin />} />
         <Route path="/login" element={<Login />} />
         <Route path="/subscription-expired" element={<SubscriptionExpired />} />
-        <Route path="/menu" element={<Menu />} /> {/* 👈 herkese açık */}
+        <Route path="/menu" element={<Menu />} />
 
-        {/* Tenant kontrolü gerektiren tüm yollar burada: */}
+        {/* Yetkili sayfalar */}
         <Route
-          path="/"
+          path="/tables"
           element={
             <RequireTenant>
               <RequireAuth>
@@ -86,7 +106,7 @@ function AppRoutes() {
             <RequireTenant>
               <RequireAuth>
                 <UserManagement />
-              </RequireAuth>
+              </AuthProvider>
             </RequireTenant>
           }
         />
