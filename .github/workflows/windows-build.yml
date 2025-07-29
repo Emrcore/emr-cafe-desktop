@@ -3,7 +3,7 @@ name: Windows Build and Release
 on:
   push:
     branches: [main]
-  workflow_dispatch: # manuel çalýþtýrmak için
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,17 +12,22 @@ jobs:
     steps:
       - name: Repo'yu klonla
         uses: actions/checkout@v3
+        with:
+          path: .
 
       - name: Node.js yükle
         uses: actions/setup-node@v4
         with:
           node-version: "18"
 
-      - name: Paketleri yükle
+      - name: Server baðýmlýlýklarýný kur
         run: npm install
 
+      - name: Client baðýmlýlýklarýný kur
+        run: cd client && npm install
+
       - name: React arayüzünü üret
-        run: npm run build
+        run: cd client && npm run build
 
       - name: Electron .exe üret
         run: npm run package
