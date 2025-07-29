@@ -1,46 +1,46 @@
-  "build": {
-    "appId": "com.emrcafe.desktop",
-    "productName": "EMR Cafe",
-    "icon": "assets/icon.ico",   // ? Buraya eklendi
-    "files": [
-      "electron/**/*",
-      "server/**/*",
-      "client/dist/**/*",
-      "config/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "invoices/",
-        "to": "invoices"
-      },
-      {
-        "from": "uploads/",
-        "to": "uploads"
-      }
-    ],
-    "directories": {
-      "buildResources": "assets",
-      "output": "dist"
+"build": {
+  "appId": "com.emrcafe.desktop",
+  "productName": "EMR Cafe",
+  "icon": "assets/icon.ico",
+  "files": [
+    "electron/**/*",
+    "server/**/*",
+    "client/dist/**/*",
+    "config/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "invoices/",
+      "to": "invoices"
     },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "emrcore",
-        "repo": "emr-cafe-desktop"
-      }
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+    {
+      "from": "uploads/",
+      "to": "uploads"
     }
+  ],
+  "directories": {
+    "buildResources": "assets",
+    "output": "dist"
   },
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "emrcore",
+      "repo": "emr-cafe-desktop"
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ]
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true
+  }
+}
