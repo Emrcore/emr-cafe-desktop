@@ -31,6 +31,8 @@ jobs:
 
       - name: Electron .exe üret
         run: npm run package
+        env:                               # ? BURASI EKLENDÝ!
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: .exe dosyasýný artifact olarak kaydet
         uses: actions/upload-artifact@v4
@@ -45,4 +47,4 @@ jobs:
           name: EMR Cafe Build ${{ github.run_number }}
           files: dist/*.exe
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
