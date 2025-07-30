@@ -37,11 +37,16 @@ function RedirectToStart() {
 
     if (!tenant) {
       navigate("/tenant", { replace: true });
-    } else if (!user) {
-      navigate("/login", { replace: true });
-    } else {
-      navigate("/tables", { replace: true });
+      return;
     }
+
+    if (!user) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    // Eğer her şey tamamsa tables'a gönder
+    navigate("/tables", { replace: true });
   }, [navigate]);
 
   return null;

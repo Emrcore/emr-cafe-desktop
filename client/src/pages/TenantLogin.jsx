@@ -1,12 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function TenantLogin() {
   const [tenant, setTenant] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const trimmed = tenant.trim().toLowerCase();
-
     if (!trimmed) return alert("İşletme adı girin");
 
     const fullDomain = `https://${trimmed}.cafe.emrcore.com.tr`;
@@ -15,8 +16,8 @@ export default function TenantLogin() {
       const res = await fetch(`${fullDomain}/api/ping`);
 
       if (res.ok) {
-        // ✅ Doğrudan işletmenin subdomainine yönlendir
-        window.location.href = fullDomain;
+        localStorage.setItem("tenant_url", fullDomain); // 🔐 kaydet
+        navigate("/login"); // 👉 login ekranına geç
       } else {
         alert("Sunucuya ulaşılamadı.");
       }
