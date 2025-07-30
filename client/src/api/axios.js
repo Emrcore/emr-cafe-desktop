@@ -3,12 +3,13 @@ import axios from "axios";
 const getBaseURL = () => {
   const host = window.location.hostname;
 
-  // Eðer subdomain yapýsý doðruysa: örn. x.cafe.emrcore.com.tr
+  // ? Gerçek subdomain yapýsý: x.cafe.emrcore.com.tr
   if (host.endsWith(".cafe.emrcore.com.tr")) {
     return `https://${host}/api`;
   }
 
-  return "/api"; // fallback (localhost gibi durumlar)
+  // ?? Yerel geliþtirme ortamý için fallback
+  return "http://localhost:3001/api";
 };
 
 const instance = axios.create({
