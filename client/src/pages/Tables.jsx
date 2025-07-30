@@ -2,16 +2,19 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import axios from "../api/axios";
+import { LogOut } from "lucide-react"; // ✅ ikon eklendi
+import { useAuth } from "../context/AuthContext";
 
 const socket = io({ path: "/socket.io" });
 
 export default function Tables() {
   const [tables, setTables] = useState([]);
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   useEffect(() => {
     axios.get("/tables").then((res) => {
-      console.log("API'den gelen masalar:", res.data);  // <-- BURAYI EKLE!
+      console.log("API'den gelen masalar:", res.data);
       setTables(res.data);
     });
 
@@ -23,19 +26,37 @@ export default function Tables() {
     };
   }, []);
 
+  const handleLogout = () => {
+    logout();
+    localStorage.removeItem("tenant_url");
+    navigate("/tenant");
+  };
+
   return (
     <div className="p-4">
+      {/* ✅ Sağ üst çıkış butonu */}
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+        >
+          <LogOut size={18} />
+          Çıkış Yap
+        </button>
+      </div>
+
       <h2 className="text-xl font-bold mb-4">Masalar</h2>
+
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {tables.map((table, i) => {
-          const tableId = table._id || table.id; // <-- Hem Mongo hem eski JSON desteği
-          console.log("Masa renderlandı:", table, "tableId:", tableId); // <-- BURAYI EKLE!
+          const tableId = table._id || table.id;
+          console.log("Masa renderlandı:", table, "tableId:", tableId);
 
           return (
             <div
               key={tableId || i}
               onClick={() => {
-                console.log("Masa tıklandı. id:", tableId); // <-- BURAYI EKLE!
+                console.log("Masa tıklandı. id:", tableId);
                 if (!tableId) {
                   alert("Bu masanın id'si yok! Lütfen yöneticinize bildiriniz.");
                   return;
