@@ -3,7 +3,7 @@ import { useState } from "react";
 export default function TenantLogin() {
   const [tenant, setTenant] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const trimmed = tenant.trim().toLowerCase();
 
@@ -11,18 +11,18 @@ export default function TenantLogin() {
 
     const fullDomain = `https://${trimmed}.cafe.emrcore.com.tr`;
 
-    // Ping atarak kontrol etmek istersen (isteğe bağlı):
-    fetch(`${fullDomain}/api/ping`)
-      .then((res) => {
-        if (res.ok) {
-          window.location.href = fullDomain; // ✅ Gerçek subdomaine yönlendir
-        } else {
-          alert("Sunucuya ulaşılamadı.");
-        }
-      })
-      .catch(() => {
-        alert("Bağlantı hatası! Sunucu çalışıyor mu?");
-      });
+    try {
+      const res = await fetch(`${fullDomain}/api/ping`);
+
+      if (res.ok) {
+        // ✅ Doğrudan işletmenin subdomainine yönlendir
+        window.location.href = fullDomain;
+      } else {
+        alert("Sunucuya ulaşılamadı.");
+      }
+    } catch (err) {
+      alert("Bağlantı hatası! Sunucu çalışıyor mu?");
+    }
   };
 
   return (
