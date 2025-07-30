@@ -1,7 +1,14 @@
 import { Link, useLocation } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
-import { LayoutGrid, FileText, Users, Settings, Shield, BarChart2 } from "lucide-react";
+import {
+  LayoutGrid,
+  FileText,
+  Users,
+  Settings,
+  Shield,
+  BarChart2,
+} from "lucide-react";
 
 export default function MobileNav() {
   const { pathname } = useLocation();
@@ -11,7 +18,7 @@ export default function MobileNav() {
   if (pathname === "/menu") return null;
 
   const navItems = [
-    { path: "/", label: "Masalar", icon: <LayoutGrid size={18} /> },
+    { path: "/tables", label: "Masalar", icon: <LayoutGrid size={18} /> }, // ✅ düzeltildi
     { path: "/report", label: "Rapor", icon: <FileText size={18} /> },
     { path: "/users", label: "Kullanıcılar", icon: <Users size={18} /> },
     { path: "/settings", label: "Ayarlar", icon: <Settings size={18} /> },
@@ -19,7 +26,11 @@ export default function MobileNav() {
 
   if (user?.role === "admin") {
     navItems.push(
-      { path: "/report-advanced", label: "G. Rapor", icon: <BarChart2 size={18} /> },
+      {
+        path: "/report-advanced",
+        label: "G. Rapor",
+        icon: <BarChart2 size={18} />,
+      },
       { path: "/admin", label: "Admin", icon: <Shield size={18} /> }
     );
   }
