@@ -11,6 +11,7 @@ import Tables from "./pages/Tables";
 import AdminImages from "./pages/AdminImages";
 import TableDetail from "./pages/TableDetail";
 import UserManagement from "./pages/UserManagement";
+import KitchenOrders from "./pages/KitchenOrders";
 import Settings from "./pages/Settings";
 import Report from "./pages/Report";
 import Login from "./pages/Login";
@@ -27,6 +28,8 @@ import ReportAdvanced from "./pages/ReportAdvanced";
 import ToasterProvider from "./components/ToasterProvider";
 import toast from "react-hot-toast";
 import TenantLogin from "./pages/TenantLogin";
+import WaiterCalls from "./pages/WaiterCalls"; // 🔹 Garson paneli
+import CallWaiter from "./pages/CallWaiter"; // 🔹 Müşteri garson çağırma
 
 function RedirectToStart() {
   const navigate = useNavigate();
@@ -78,11 +81,12 @@ function AppRoutes() {
   return (
     <div className="pb-16 min-h-screen bg-gray-50 dark:bg-gray-900">
       <Routes>
-        <Route path="/" element={<RedirectToStart />} /> {/* 🔁 giriş kontrolü */}
+        <Route path="/" element={<RedirectToStart />} />
         <Route path="/tenant" element={<TenantLogin />} />
         <Route path="/login" element={<Login />} />
         <Route path="/subscription-expired" element={<SubscriptionExpired />} />
-        <Route path="/menu" element={<Menu />} />
+        <Route path="/menu" element={<Menu />} /> {/* 🍽️ Menü (herkese açık) */}
+        <Route path="/call-waiter" element={<CallWaiter />} /> {/* 🛎️ Garson çağır (müşteri) */}
 
         {/* Yetkili sayfalar */}
         <Route
@@ -186,6 +190,27 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/kitchen"
+          element={
+            <RequireTenant>
+              <RequireAuth>
+                <KitchenOrders />
+              </RequireAuth>
+            </RequireTenant>
+          }
+        />
+        <Route
+          path="/waiter-calls"
+          element={
+            <RequireTenant>
+              <RequireAuth>
+                <WaiterCalls />
+              </RequireAuth>
+            </RequireTenant>
+          }
+        />
+
+        <Route
           path="*"
           element={
             <h1 className="p-10 text-center text-red-600 text-xl">
@@ -194,6 +219,7 @@ function AppRoutes() {
           }
         />
       </Routes>
+
       {!hideNav && <MobileNav />}
     </div>
   );

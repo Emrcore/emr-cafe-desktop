@@ -23,7 +23,9 @@ const licenseRouter = require("./routes/license");
 const salesRouter = require("./routes/sales");
 const posRouter = require("./routes/pos");
 const reportsAdvancedRouter = require("./routes/reportsAdvanced");
+const ordersRouter = require("./routes/orders");
 const invoiceRouter = require("./routes/invoices");
+const callRoutes = require("./routes/calls");
 
 // ? MIDDLEWARE
 const tenantMiddleware = require("./middleware/tenant");
@@ -31,9 +33,14 @@ const subscriptionCheck = require("./middleware/subscriptionCheck");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  },
+});
 
-// ? ORTAK MIDDLEWARE
+// ? Global Middleware
 app.use(cors());
 app.use(express.json());
 app.use((req, res, next) => {
@@ -41,14 +48,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// ? Login route'u middleware'den ÖNCE tanýmlanmalý
-app.use("/api/login", authRouter);
+// ? LOGIN (sadece tenant kontrolü)
+app.use("/api/login", tenantMiddleware, authRouter);
 
-// ? Diðer tüm API isteklerine middleware uygula
-app.use("/api", tenantMiddleware);
-app.use("/api", subscriptionCheck);
+// ? Açýk endpoint: QR menüden garson çaðýrma
+app.use("/api/calls", callRoutes);
 
-// ? API route'larý
+// ? Korunan endpoint'ler (auth + abonelik)
+app.use("/api", tenantMiddleware, subscriptionCheck);
 app.use("/api/reports", reportRouter);
 app.use("/api/products", productRouter);
 app.use("/api/products", productUploadRouter);
@@ -60,24 +67,25 @@ app.use("/api/sales", salesRouter);
 app.use("/api/pos", posRouter);
 app.use("/api/reports-advanced", reportsAdvancedRouter);
 app.use("/api/invoices", invoiceRouter);
+app.use("/api/orders", ordersRouter); // özel olarak yukarýda middleware uygulandý zaten
 
-// ? Statik dosyalar
+// ? Statik klasörler
 app.use("/invoices", express.static(path.join(__dirname, "invoices")));
 app.use("/uploads", express.static("/var/www/uploads"));
 
-// ? React frontend (client/dist dizini)
+// ? React frontend
 const clientBuildPath = path.join(__dirname, "..", "client", "dist");
 app.use(express.static(clientBuildPath));
 app.get("*", (req, res) => {
   res.sendFile(path.join(clientBuildPath, "index.html"));
 });
 
-// ? Socket.IO
+// ? Socket.IO baðlantýsý
 io.on("connection", (socket) => {
   console.log("? Yeni baðlantý:", socket.id);
 });
 
 // ? Sunucu baþlat
 server.listen(3001, () => {
-  console.log("? Sunucu çalýþýyor: http://localhost:3001");
+  console.log("?? Sunucu çalýþýyor: http://localhost:3001");
 });

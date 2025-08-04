@@ -1,17 +1,23 @@
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
-const mongoose = require("mongoose"); // ?? Global baðlantý
+const mongoose = require("mongoose");
 const UserModel = require("../models/User");
+const tenantMiddleware = require("../middleware/tenant"); // ? Ekledik
 
-const User = UserModel(mongoose.connection); // ?? Global baðlantýdan model üret
-
-// Login
-router.post("/", async (req, res) => {
+// ? tenantMiddleware'i sadece bu route için uygula
+router.post("/", tenantMiddleware, async (req, res) => {
   const { username, password } = req.body;
 
   try {
+    const tenantId = req.tenant?.tenantId || "global";
+    console.log("?? Giriþ yapýlan tenant:", tenantId);
+
+    const db = req.db || mongoose.connection;
+    const User = UserModel(db);
+
     const user = await User.findOne({ username });
+
     if (!user) {
       console.log("? Kullanýcý bulunamadý:", username);
       return res.status(401).json({ error: "Kullanýcý bulunamadý" });
@@ -25,7 +31,6 @@ router.post("/", async (req, res) => {
       return res.status(401).json({ error: "Þifre hatalý" });
     }
 
-    // Giriþ baþarýlý
     console.log("? Giriþ baþarýlý:", username);
     res.json({ username: user.username, role: user.role });
 

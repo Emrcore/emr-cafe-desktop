@@ -1,9 +1,13 @@
 // src/socket.js
 import { io } from "socket.io-client";
 
-const socket = io({
+const hostname = window.location.hostname;
+const isSecure = window.location.protocol === "https:";
+const protocol = isSecure ? "wss" : "ws";
+
+const socket = io(`${protocol}://${hostname}`, {
+  transports: ["websocket"],
   path: "/socket.io",
-  transports: ["websocket", "polling"], // fallback desteði
 });
 
-export default socket;
+export default socket; // ? default export

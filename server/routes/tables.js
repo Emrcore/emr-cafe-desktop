@@ -4,10 +4,16 @@ const express = require("express");
 const router = express.Router();
 const getTenantDb = require("../db");
 const TableModel = require("../models/Table");
+const OrderModel = require("../models/Order");
 
 const getTableModel = (req) => {
   const connection = getTenantDb(req.tenantDbName);
   return TableModel(connection);
+};
+
+const getOrderModel = (req) => {
+  const connection = getTenantDb(req.tenantDbName);
+  return OrderModel(connection);
 };
 
 // ✅ Tüm masaları getir
@@ -63,20 +69,21 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// ✅ Masaya ürün ekle
+// ✅ Masaya ürün ekle + mutfağa bildir
 router.post("/:id/order", async (req, res) => {
   try {
     const Table = getTableModel(req);
+    const Order = getOrderModel(req);
+
     const table = await Table.findById(req.params.id);
     if (!table) return res.status(404).json({ error: "Masa bulunamadı" });
 
     const order = req.body;
-
-    // ������ Eksik veri kontrolü
     if (!order.id || !order.name || typeof order.price !== "number") {
-      return res.status(400).json({ message: "Eksik ürün verisi (id, name, price zorunlu)" });
+      return res.status(400).json({ message: "Eksik ürün verisi" });
     }
 
+    // ✅ Masaya siparişi ekle
     const existing = table.orders.find((o) => o.id === order.id);
     if (existing) {
       existing.qty += 1;
@@ -86,7 +93,23 @@ router.post("/:id/order", async (req, res) => {
 
     table.status = "occupied";
     await table.save();
+
+    // ✅ Mutfak siparişi oluştur
+    const newOrder = new Order({
+      table: table._id,
+      items: [{ name: order.name, quantity: 1 }],
+    });
+    const savedOrder = await newOrder.save();
+    const populatedOrder = await Order.findById(savedOrder._id).populate({
+      path: "table",
+      model: Table,
+      select: "name",
+    });
+
+    // ������ Canlı bildirim
     req.io.emit("tables:update", await Table.find());
+    req.io.emit("new-order", populatedOrder);
+
     res.json(table);
   } catch (err) {
     console.error("Sipariş ekleme hatası:", err);

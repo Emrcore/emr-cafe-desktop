@@ -13,17 +13,23 @@ export default function LoginPage() {
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    try {
-      const res = await axios.post("/login", form); // ✅ IP yok, otomatik çalışır
-      login(res.data);
-      toast.success("Giriş başarılı!");
-      navigate("/tables");
-    } catch (err) {
-      toast.error("Kullanıcı adı veya şifre hatalı");
-    }
-  };
+  try {
+    const tenant = localStorage.getItem("tenant_url") || ""; // örnek: emr-cafe_demo
+    const res = await axios.post("/login", form, {
+      headers: {
+        "x-tenant-id": tenant,
+      },
+    });
+
+    login(res.data);
+    toast.success("Giriş başarılı!");
+    navigate("/tables");
+  } catch (err) {
+    toast.error("Kullanıcı adı veya şifre hatalı");
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">

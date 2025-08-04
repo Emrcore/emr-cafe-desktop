@@ -182,18 +182,36 @@ export default function TableDetail() {
       )}
 
       <h3 className="font-bold mt-6 mb-2 dark:text-white">Ürünler</h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {products.map((p) => (
-          <button
-            key={p._id}
-            onClick={() => addProduct(p)}
-            className="p-3 bg-blue-100 dark:bg-blue-900 rounded text-center hover:opacity-90"
-          >
-            <div className="font-semibold text-sm text-black dark:text-white">{p.name}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-300">{p.price}₺</div>
-          </button>
-        ))}
-      </div>
+
+      {Object.entries(
+        products.reduce((groups, product) => {
+          const category = product.category || "Diğer";
+          if (!groups[category]) groups[category] = [];
+          groups[category].push(product);
+          return groups;
+        }, {})
+      ).map(([categoryName, items]) => (
+        <div key={categoryName} className="mb-6">
+          <h4 className="text-lg font-semibold mb-2 dark:text-white">{categoryName}</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {items.map((p) => (
+              <button
+                key={p._id}
+                onClick={() => addProduct(p)}
+                className="bg-white dark:bg-slate-800 rounded-lg shadow hover:shadow-lg transition p-2 flex flex-col items-center text-center"
+              >
+                <img
+                  src={p.image || "/default.png"}
+                  alt={p.name}
+                  className="w-24 h-24 object-cover rounded mb-2"
+                />
+                <div className="font-semibold text-sm text-gray-800 dark:text-white">{p.name}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-300">{p.price}₺</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
