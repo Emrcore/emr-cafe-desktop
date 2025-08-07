@@ -1,6 +1,6 @@
 {
   "name": "emr-cafe",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Cafe adisyon sistemi",
   "main": "electron/main.js",
   "scripts": {
