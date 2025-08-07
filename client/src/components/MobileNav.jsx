@@ -9,69 +9,80 @@ import {
   Shield,
   BarChart2,
   UtensilsCrossed,
+  Bell,
+  ClipboardList,
 } from "lucide-react";
 
 export default function MobileNav() {
   const { pathname } = useLocation();
   const { user } = useContext(AuthContext);
 
-  // Menü ve mutfak ekranlarında nav gizle
+  // Menü veya mutfak ekranı ise nav gizle
   if (pathname === "/menu" || pathname === "/kitchen") return null;
 
-  // Eğer mutfak kullanıcısıysa, sadece mutfak menüsü gösterilsin
+  // 🔸 Mutfak kullanıcısı için sadece mutfak sayfası
   if (user?.role === "mutfak") {
     return (
-      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-700 shadow-md flex justify-around items-center h-16 z-50">
-        <Link
-          to="/kitchen"
-          className={`flex flex-col items-center justify-center h-full px-3 transition-all ${
-            pathname === "/kitchen"
-              ? "text-blue-600 dark:text-blue-400 font-semibold"
-              : "text-gray-500 dark:text-gray-300"
-          }`}
-        >
-          <UtensilsCrossed size={18} />
-          <span className="text-xs">Mutfak</span>
-        </Link>
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-slate-700 h-16 flex justify-around items-center">
+        <MobileLink path="/kitchen" label="Mutfak" icon={<UtensilsCrossed size={20} />} />
       </nav>
     );
   }
 
-  // Diğer roller için varsayılan menü
+  // 🔸 Garson için sadece masalar ve çağrılar
+  if (user?.role === "garson") {
+    return (
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-slate-700 h-16 flex justify-around items-center">
+        <MobileLink path="/tables" label="Masalar" icon={<LayoutGrid size={20} />} />
+        <MobileLink path="/waiter-calls" label="Çağrılar" icon={<Bell size={20} />} />
+      </nav>
+    );
+  }
+
+  // 🔸 Diğer roller (admin, muhasebe)
   const navItems = [
-    { path: "/tables", label: "Masalar", icon: <LayoutGrid size={18} /> },
-    { path: "/report", label: "Rapor", icon: <FileText size={18} /> },
-    { path: "/users", label: "Kullanıcılar", icon: <Users size={18} /> },
-    { path: "/settings", label: "Ayarlar", icon: <Settings size={18} /> },
+    { path: "/tables", label: "Masalar", icon: <LayoutGrid size={20} /> },
+    { path: "/report", label: "Rapor", icon: <FileText size={20} /> },
+    { path: "/users", label: "Kullanıcılar", icon: <Users size={20} /> },
+    { path: "/settings", label: "Ayarlar", icon: <Settings size={20} /> },
   ];
 
   if (user?.role === "admin") {
     navItems.push(
-      {
-        path: "/report-advanced",
-        label: "G. Rapor",
-        icon: <BarChart2 size={18} />,
-      },
-      { path: "/admin", label: "Admin", icon: <Shield size={18} /> }
+      { path: "/report-advanced", label: "G. Rapor", icon: <BarChart2 size={20} /> },
+      { path: "/admin/logs", label: "Loglar", icon: <ClipboardList size={20} /> },
+      { path: "/admin", label: "Admin", icon: <Shield size={20} /> }
     );
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-700 shadow-md flex justify-around items-center h-16 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-slate-700 h-16 flex justify-around items-center">
       {navItems.map((item) => (
-        <Link
-          key={item.path}
-          to={item.path}
-          className={`flex flex-col items-center justify-center h-full px-3 transition-all ${
-            pathname === item.path
-              ? "text-blue-600 dark:text-blue-400 font-semibold"
-              : "text-gray-500 dark:text-gray-300"
-          }`}
-        >
-          {item.icon}
-          <span className="text-xs">{item.label}</span>
-        </Link>
+        <MobileLink key={item.path} {...item} />
       ))}
     </nav>
+  );
+}
+
+// 🔧 Ortak alt bileşen
+function MobileLink({ path, label, icon }) {
+  const { pathname } = useLocation();
+  const isActive = pathname === path;
+
+  return (
+    <Link
+      to={path}
+      className={`flex flex-col items-center justify-center transition-all duration-200 relative ${
+        isActive
+          ? "text-blue-500 font-bold"
+          : "text-gray-400 hover:text-blue-400"
+      }`}
+    >
+      {icon}
+      <span className="text-[10px] mt-1">{label}</span>
+      {isActive && (
+        <span className="absolute top-0 left-0 w-full h-1 bg-blue-500 rounded-t-lg animate-pulse" />
+      )}
+    </Link>
   );
 }

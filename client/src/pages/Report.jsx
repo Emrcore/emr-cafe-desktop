@@ -2,6 +2,7 @@ import BackButton from "../components/BackButton";
 import { useEffect, useState } from "react";
 import axios from "../api/axios";
 import toast from "react-hot-toast";
+import { FileText, FileSpreadsheet, Receipt } from "lucide-react";
 
 export default function Report() {
   const [sales, setSales] = useState([]);
@@ -12,7 +13,7 @@ export default function Report() {
     const today = new Date().toISOString().split("T")[0];
     const res = await axios.get(`/reports${todayOnly ? `?date=${today}` : ""}`);
     setSales(res.data);
-    setSelectedSales([]); // Tarih değiştiğinde seçim sıfırlanır
+    setSelectedSales([]);
   };
 
   useEffect(() => {
@@ -37,81 +38,106 @@ export default function Report() {
     );
   };
 
-  const generateInvoice = async () => {
+  const generateInvoices = async () => {
     try {
       const selected = sales.filter((s) => selectedSales.includes(s._id));
       if (selected.length === 0) return toast.error("Lütfen fatura için satış seçin.");
 
-      const response = await axios.post("/invoices/generate", { sales: selected }, {
-        responseType: "blob",
-      });
+      for (const s of selected) {
+        const response = await axios.post("/invoices/generate", {
+          customerName: "",
+          paymentType: s.paymentMethod,
+          tableId: s.tableId,
+          items: s.orders.map((o) => ({
+            name: o.name,
+            price: o.price,
+            quantity: o.qty,
+          })),
+        });
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `fatura_${Date.now()}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      toast.success("Fatura indirildi");
+        const invoiceId = response.data._id;
+        window.open(`/api/invoices/${invoiceId}/pdf`, "_blank");
+      }
+
+      toast.success("🧾 Faturalar oluşturuldu");
     } catch (err) {
-      toast.error("Fatura oluşturulamadı");
+      toast.error("❌ Fatura oluşturulamadı");
       console.error(err);
     }
   };
 
   return (
-    <div className="p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-800 to-slate-900 text-white p-4">
       <BackButton />
-      <h2 className="text-2xl font-bold mb-4">Satış Raporu</h2>
+      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+        <FileText size={24} />
+        Satış Raporu
+      </h2>
 
-      <div className="mb-4 flex items-center gap-4 flex-wrap">
-        <label>
+      <div className="mb-6 flex items-center gap-4 flex-wrap">
+        <label className="flex items-center gap-2">
           <input
             type="checkbox"
             checked={todayOnly}
             onChange={(e) => setTodayOnly(e.target.checked)}
+            className="accent-blue-500"
           />
-          <span className="ml-2">Sadece Bugünün Satışları</span>
+          <span>Sadece Bugünün Satışları</span>
         </label>
 
         <button
           onClick={downloadExcel}
-          className="bg-green-600 text-white px-4 py-2 rounded"
+          className="bg-green-600 hover:bg-green-700 transition text-white px-4 py-2 rounded flex items-center gap-2"
         >
-          Excel Olarak İndir
+          <FileSpreadsheet size={16} /> Excel İndir
         </button>
 
         <button
-          onClick={generateInvoice}
+          onClick={generateInvoices}
           disabled={selectedSales.length === 0}
-          className={`bg-blue-600 text-white px-4 py-2 rounded ${selectedSales.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={`bg-blue-600 hover:bg-blue-700 transition text-white px-4 py-2 rounded flex items-center gap-2 ${
+            selectedSales.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+          }`}
         >
-          Seçilenlere Fatura Oluştur
+          <Receipt size={16} /> Seçilenlere Fatura Oluştur
         </button>
       </div>
 
-      <div className="mb-4">
-        <p><strong>Toplam Satış:</strong> {summary.total.toFixed(2)} ₺</p>
+      <div className="mb-6 bg-slate-700 p-4 rounded-lg shadow-md">
+        <p className="text-lg font-semibold">
+          Toplam Satış: <span className="text-green-300">{summary.total.toFixed(2)} ₺</span>
+        </p>
       </div>
 
-      <div className="border-t pt-4 space-y-4">
+      <div className="space-y-6">
         {sales.map((s, i) => (
-          <div key={i} className="border-b pb-4">
-            <label className="flex items-center gap-2">
+          <div
+            key={i}
+            className="bg-slate-800 border border-slate-700 p-4 rounded-lg shadow-md transition hover:border-blue-500"
+          >
+            <label className="flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={selectedSales.includes(s._id)}
                 onChange={() => toggleSelect(s._id)}
+                className="mt-1 accent-blue-500"
               />
               <div>
-                <p><strong>Masa:</strong> {s.tableId}</p>
-                <p><strong>Toplam:</strong> {s.total.toFixed(2)} ₺ - {s.paymentMethod}</p>
-                <p className="text-sm text-gray-600">{new Date(s.date).toLocaleString()}</p>
+                <p className="font-semibold">Masa: {s.tableId}</p>
+                <p className="text-sm text-slate-300">
+                  Toplam: {s.total.toFixed(2)} ₺ — {s.paymentMethod}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {new Date(s.date).toLocaleString()}
+                </p>
               </div>
             </label>
-            <ul className="ml-8 list-disc text-sm mt-2">
+
+            <ul className="ml-6 mt-2 list-disc text-sm text-slate-300">
               {s.orders.map((o, j) => (
-                <li key={j}>{o.name} x{o.qty} - {(o.price * o.qty).toFixed(2)} ₺</li>
+                <li key={j}>
+                  {o.name} × {o.qty} — {(o.price * o.qty).toFixed(2)} ₺
+                </li>
               ))}
             </ul>
           </div>

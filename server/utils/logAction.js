@@ -10,7 +10,7 @@ async function logAction(user, action, details = {}) {
       details,
     });
   } catch (err) {
-    console.error("Log kaydý hatasý:", err.message);
+    console.error("Log yazma hatasý:", err.message);
   }
 }
 

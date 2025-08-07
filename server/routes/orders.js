@@ -2,30 +2,35 @@ const express = require("express");
 const router = express.Router();
 const OrderModel = require("../models/Order");
 const TableModel = require("../models/Table");
+const logAction = require("../utils/logAction"); // ? logAction eklendi
 
 // ? Yeni sipariþ oluþtur
 router.post("/", async (req, res) => {
   try {
-    const Order = OrderModel(req.db); // tenant'a özel Order modeli
+    const Order = OrderModel(req.db);
     const Table = TableModel(req.db);
 
     const newOrder = new Order({
       table: req.body.tableId,
       items: req.body.items,
-      status: "open", // ?? Güvenli þekilde sunucu belirliyor
+      status: "open",
     });
 
     const savedOrder = await newOrder.save();
 
-    // ? Table ismini populate et
     const populatedOrder = await Order.findById(savedOrder._id).populate({
       path: "table",
       model: Table,
       select: "name",
     });
 
-    // ?? Mutfak ekranýna socket ile bildir
     req.io.emit("new-order", populatedOrder);
+
+    // ? Logla: Sipariþ oluþturuldu
+    await logAction(req.user, "Sipariþ oluþturdu", {
+      table: populatedOrder.table?.name,
+      items: populatedOrder.items,
+    });
 
     res.status(201).json(populatedOrder);
   } catch (err) {
@@ -63,13 +68,20 @@ router.put("/:id/complete", async (req, res) => {
       req.params.id,
       { status: "completed" },
       { new: true }
-    );
+    ).populate("table");
 
     if (!updatedOrder) {
       return res.status(404).json({ message: "Sipariþ bulunamadý" });
     }
 
     req.io.emit("order-completed", updatedOrder._id);
+
+    // ? Logla: Sipariþ tamamlandý
+    await logAction(req.user, "Sipariþi tamamladý", {
+      table: updatedOrder.table?.name,
+      orderId: updatedOrder._id,
+    });
+
     res.json({ message: "Sipariþ tamamlandý", order: updatedOrder });
   } catch (err) {
     console.error("? Tamamlama hatasý:", err);

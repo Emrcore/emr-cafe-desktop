@@ -1,42 +1,69 @@
 const PDFDocument = require("pdfkit");
-const fs = require("fs");
+const { finished } = require("stream");
 
 function generateInvoicePdf(invoice, res) {
-  const doc = new PDFDocument({ size: "A4", margin: 50 });
+  try {
+    if (!invoice.items || invoice.items.length === 0) {
+      res.status(400).send("Fatura ürün listesi boþ. PDF oluþturulamadý.");
+      return;
+    }
 
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `inline; filename="${invoice.invoiceNumber}.pdf"`);
+    const doc = new PDFDocument({ size: "A4", margin: 50 });
 
-  doc.pipe(res);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename=fatura-${invoice.invoiceNumber}.pdf`
+    );
 
-  // Baþlýk
-  doc.fontSize(20).text("EMR CAFE", { align: "center" });
-  doc.fontSize(12).text(`Fatura No: ${invoice.invoiceNumber}`, { align: "center" });
-  doc.text(`Tarih: ${new Date(invoice.createdAt).toLocaleString("tr-TR")}`, { align: "center" });
-  doc.moveDown();
+    // PDF'i yanýt akýþýna baðla
+    doc.pipe(res);
 
-  // Masa bilgileri
-  doc.text(`Masa: ${invoice.tableName}`);
-  doc.text(`Ödeme Türü: ${invoice.paymentType}`);
-  doc.moveDown();
+    // Baþlýk
+    doc.fontSize(20).text("FATURA", { align: "center" }).moveDown();
 
-  // Sipariþ listesi
-  doc.text("Ürünler:", { underline: true });
-  invoice.orders.forEach((item) => {
-    doc.text(`${item.productName} x${item.quantity} = ?${item.price * item.quantity}`);
-  });
+    // Bilgiler
+    doc.fontSize(12).text(`Fatura No: ${invoice.invoiceNumber}`);
+    doc.text(`Müþteri: ${invoice.customerName || "-"}`);
+    doc.text(`Tarih: ${new Date(invoice.createdAt).toLocaleString("tr-TR")}`);
+    doc.text(`Ödeme Türü: ${invoice.paymentType}`);
+    doc.moveDown();
 
-  // Toplam
-  const total = invoice.total;
-  const vat = total * 0.1;
-  const subTotal = total - vat;
+    // Ürünler
+    doc.fontSize(14).text("Ürünler:", { underline: true }).moveDown(0.5);
 
-  doc.moveDown();
-  doc.text(`Ara Toplam: ?${subTotal.toFixed(2)}`);
-  doc.text(`KDV (%10): ?${vat.toFixed(2)}`);
-  doc.text(`Toplam: ?${total.toFixed(2)}`);
+    invoice.items.forEach((item, i) => {
+      const quantity = item.quantity || 1;
+      doc
+        .fontSize(12)
+        .text(`${i + 1}. ${item.name} x${quantity} — ${(item.price * quantity).toFixed(2)} ?`);
+    });
 
-  doc.end();
+    // Toplam
+    const total = invoice.items.reduce(
+      (sum, item) => sum + item.price * (item.quantity || 1),
+      0
+    );
+    doc.moveDown();
+    doc.fontSize(14).text(`Toplam Tutar: ${total.toFixed(2)} ?`, {
+      align: "right",
+    });
+
+    doc.end(); // ?? PDF oluþturmayý bitir
+
+    // ? Stream'in düzgün bitmesini garanti et
+    finished(doc, (err) => {
+      if (err) {
+        console.error("PDF stream hatasý:", err);
+        if (!res.headersSent) res.status(500).send("PDF stream hatasý");
+      }
+    });
+  } catch (error) {
+    console.error("PDF oluþturma hatasý:", error);
+    if (!res.headersSent) {
+      res.status(500).send("PDF oluþturulurken hata oluþtu.");
+    }
+  }
 }
 
 module.exports = generateInvoicePdf;

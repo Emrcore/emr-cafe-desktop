@@ -3,9 +3,9 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const UserModel = require("../models/User");
-const tenantMiddleware = require("../middleware/tenant"); // ? Ekledik
+const tenantMiddleware = require("../middleware/tenant");
+const logAction = require("../utils/logAction"); // ? Loglama eklendi
 
-// ? tenantMiddleware'i sadece bu route için uygula
 router.post("/", tenantMiddleware, async (req, res) => {
   const { username, password } = req.body;
 
@@ -32,10 +32,18 @@ router.post("/", tenantMiddleware, async (req, res) => {
     }
 
     console.log("? Giriþ baþarýlý:", username);
+
+    // ? Log kaydý oluþtur
+    await logAction(user, "Giriþ yaptý", {
+      ip: req.ip,
+      userAgent: req.headers["user-agent"],
+      tenant: tenantId,
+    });
+
     res.json({ username: user.username, role: user.role });
 
   } catch (err) {
-    console.error("?? Giriþ sýrasýnda hata:", err.message);
+    console.error("? Giriþ sýrasýnda hata:", err.message);
     res.status(500).json({ error: "Sunucu hatasý" });
   }
 });

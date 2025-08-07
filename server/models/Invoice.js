@@ -1,18 +1,18 @@
 const mongoose = require("mongoose");
 
 const invoiceSchema = new mongoose.Schema({
-  invoiceNumber: { type: String, required: true, unique: true }, // FTR-000001 gibi
-  tableName: String,
-  total: Number,
+  invoiceNumber: { type: String, required: true },
+  tableId: String,
   paymentType: String,
-  createdAt: { type: Date, default: Date.now },
-  orders: [
+  customerName: String,
+  items: [
     {
-      productName: String,
+      name: String,
+      price: Number,
       quantity: Number,
-      price: Number
-    }
-  ]
+    },
+  ],
+  createdAt: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model("Invoice", invoiceSchema);

@@ -1,7 +1,10 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { printReceipt, printKitchen } = require("./printer");
+
+// Güncelleme için autoUpdater modülü
+const { autoUpdater } = require("electron-updater");
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -14,13 +17,35 @@ function createWindow() {
     },
   });
 
-  // Sunucudaki frontend'e bağlan
   win.loadURL("http://185.149.103.223:3001");
 
-  // win.webContents.openDevTools(); // Geliştirici aracı (isteğe bağlı)
+  // ❗ Güncelleme kontrolü başlat
+  autoUpdater.checkForUpdatesAndNotify();
+
+  // Geliştirici araçları (opsiyonel)
+  // win.webContents.openDevTools();
 }
 
-// IPC: Müşteri fişi yazdırma
+// ❗ Güncelleme olayları
+autoUpdater.on("update-available", () => {
+  dialog.showMessageBox({
+    type: "info",
+    title: "Güncelleme var",
+    message: "Yeni sürüm indiriliyor...",
+  });
+});
+
+autoUpdater.on("update-downloaded", () => {
+  dialog.showMessageBox({
+    type: "info",
+    title: "Güncelleme indirildi",
+    message: "Uygulama şimdi yeniden başlatılacak ve güncellenecek.",
+  }).then(() => {
+    autoUpdater.quitAndInstall();
+  });
+});
+
+// ������️ IPC: Müşteri fişi yazdırma
 ipcMain.handle("print-receipt", async (event, data) => {
   try {
     await printReceipt(data);
@@ -29,7 +54,7 @@ ipcMain.handle("print-receipt", async (event, data) => {
   }
 });
 
-// IPC: Mutfak fişi yazdırma
+// ������️ IPC: Mutfak fişi yazdırma
 ipcMain.handle("print-kitchen", async (event, data) => {
   try {
     await printKitchen(data);

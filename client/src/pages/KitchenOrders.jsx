@@ -5,8 +5,8 @@ import KitchenOrderCard from "../components/KitchenOrderCard";
 import useSound from "../hooks/useSound";
 import soundFile from "../assets/notification.mp3";
 import { useNavigate } from "react-router-dom";
-import * as socketModule from "../socket";
-const socket = socketModule.socket;
+import socket from "../socket"; // ✅ Doğru kullanım
+import { motion } from "framer-motion";
 
 export default function KitchenOrders() {
   const { user, loading } = useContext(AuthContext);
@@ -72,12 +72,20 @@ export default function KitchenOrders() {
   }, [playSound]);
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6">🍽️ Mutfak Siparişleri</h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-800 to-slate-900 text-white p-4">
+      <motion.h1
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-3xl font-bold mb-6 text-center"
+      >
+        🍽️ Mutfak Siparişleri
+      </motion.h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {orders.length === 0 ? (
-          <p className="text-gray-500 col-span-full">Henüz sipariş yok.</p>
+          <div className="col-span-full text-center text-slate-400 text-sm italic">
+            Şu anda aktif sipariş yok.
+          </div>
         ) : (
           orders.map((order) => (
             <KitchenOrderCard key={order._id} order={order} />

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "../api/axios";
 import BackButton from "../components/BackButton";
 import toast from "react-hot-toast";
+import { motion } from "framer-motion";
 
 export default function AdminTables() {
   const [tables, setTables] = useState([]);
@@ -25,7 +26,7 @@ export default function AdminTables() {
 
     try {
       await axios.post("/tables", { name: trimmedName });
-      toast.success("Masa eklendi");
+      toast.success("🪑 Masa eklendi");
       setNewTableName("");
       fetchTables();
     } catch (err) {
@@ -47,39 +48,41 @@ export default function AdminTables() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-800 to-slate-900 p-4 text-white">
       <BackButton />
-      <h2 className="text-2xl font-bold mb-4 dark:text-white">Masa Yönetimi</h2>
+      <h2 className="text-2xl font-bold mb-6">🪑 Masa Yönetimi</h2>
 
       <div className="flex flex-col sm:flex-row gap-2 mb-6">
         <input
           value={newTableName}
           onChange={(e) => setNewTableName(e.target.value)}
           placeholder="Yeni masa adı"
-          className="border p-2 flex-1 rounded dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="border p-2 flex-1 rounded bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
         <button
           onClick={addTable}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded text-white"
         >
-          Ekle
+          ➕ Ekle
         </button>
       </div>
 
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {tables.map((table) => (
-          <li
+          <motion.li
             key={table._id || table.id}
-            className="flex justify-between items-center border-b pb-1 text-sm dark:text-white"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex justify-between items-center bg-slate-800 px-4 py-3 rounded-lg shadow border border-slate-700"
           >
-            <span>{table.name}</span>
+            <span className="font-medium text-sm">{table.name}</span>
             <button
               onClick={() => deleteTable(table._id || table.id)}
-              className="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600"
+              className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition"
             >
-              Sil
+              🗑️ Sil
             </button>
-          </li>
+          </motion.li>
         ))}
       </ul>
     </div>

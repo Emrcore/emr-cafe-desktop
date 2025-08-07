@@ -1,12 +1,11 @@
-// models/Log.js
 const mongoose = require("mongoose");
 
 const logSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  userId: mongoose.Schema.Types.ObjectId,
   username: String,
   role: String,
-  action: String, // örnek: "sipariþ oluþturdu", "ödeme aldý"
-  details: Object, // örnek: { masa: "Masa 1", tutar: 120 }
+  action: String,
+  details: Object,
   createdAt: { type: Date, default: Date.now },
 });
 

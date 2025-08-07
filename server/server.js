@@ -48,6 +48,16 @@ app.use((req, res, next) => {
   next();
 });
 
+const logAction = require("./utils/logAction");
+app.get("/api/test-log", async (req, res) => {
+  await logAction(
+    { username: "test", role: "test" },
+    "test log",
+    { info: "Sunucu test logu baþarýyla kaydedildi." }
+  );
+  res.json({ message: "Log yazýldý" });
+});
+
 // ? LOGIN (sadece tenant kontrolü)
 app.use("/api/login", tenantMiddleware, authRouter);
 
