@@ -6,9 +6,7 @@ import { AuthContext } from "../context/AuthContext";
 export default function Settings() {
   const { user } = useContext(AuthContext);
   const [form, setForm] = useState({
-    firmaAdi: "",
-    kdvOrani: 0.08,
-    servisOrani: 0.05,
+    menuTitle: "",
     varsayilanOdeme: "nakit",
     logoUrl: ""
   });
@@ -22,8 +20,7 @@ export default function Settings() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const parsedValue = name === "kdvOrani" || name === "servisOrani" ? parseFloat(value) : value;
-    setForm({ ...form, [name]: parsedValue });
+    setForm({ ...form, [name]: value });
   };
 
   const handleSubmit = (e) => {
@@ -49,39 +46,13 @@ export default function Settings() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block mb-1 text-sm text-slate-300">Firma Adı</label>
+            <label className="block mb-1 text-sm text-slate-300">Menü Başlığı</label>
             <input
               type="text"
-              name="firmaAdi"
-              value={form.firmaAdi}
+              name="menuTitle"
+              value={form.menuTitle}
               onChange={handleChange}
-              placeholder="Firma Adı"
-              className="w-full p-2 rounded bg-slate-700 text-white border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-1 text-sm text-slate-300">KDV Oranı</label>
-            <input
-              type="number"
-              name="kdvOrani"
-              value={form.kdvOrani}
-              onChange={handleChange}
-              step="0.01"
-              placeholder="0.08"
-              className="w-full p-2 rounded bg-slate-700 text-white border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-1 text-sm text-slate-300">Servis Oranı</label>
-            <input
-              type="number"
-              name="servisOrani"
-              value={form.servisOrani}
-              onChange={handleChange}
-              step="0.01"
-              placeholder="0.05"
+              placeholder="Örn: Emirhan Cafe Menüsü"
               className="w-full p-2 rounded bg-slate-700 text-white border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>

@@ -71,27 +71,29 @@ export default function Menu() {
       </div>
 
       {/* Ürünler */}
-      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+
         {filtered.map((p) => (
           <div
-            key={p._id}
-            onClick={() => setModalProduct(p)}
-            className="cursor-pointer rounded-xl shadow-lg hover:shadow-2xl transition transform hover:scale-105 bg-white dark:bg-slate-900 overflow-hidden border dark:border-gray-700 group"
-          >
-            <div className="relative w-full h-48 overflow-hidden">
+  key={p._id}
+  onClick={() => setModalProduct(p)}
+  className="cursor-pointer rounded-lg shadow hover:shadow-md transition bg-white dark:bg-slate-900 overflow-hidden border dark:border-gray-700"
+>
+
+            <div className="relative w-full h-36 overflow-hidden">
               <img
                 src={getImageUrl(p.image || "/placeholder.jpg")}
                 alt={p.name}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
               />
             </div>
-            <div className="p-4">
-              <h3 className="text-lg font-bold text-gray-800 dark:text-white truncate">{p.name}</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 italic">{p.category}</p>
-              <p className="text-lg font-bold text-blue-600 dark:text-blue-400 mt-1">
-                {p.price.toFixed(2)} ₺
-              </p>
-            </div>
+            <div className="p-3">
+  <h3 className="text-sm font-semibold text-gray-800 dark:text-white truncate">{p.name}</h3>
+  <p className="text-xs text-gray-500 dark:text-gray-400">{p.category}</p>
+  <p className="text-base font-bold text-blue-600 dark:text-blue-400 mt-1">
+    {p.price.toFixed(2)} ₺
+  </p>
+</div>
           </div>
         ))}
       </div>

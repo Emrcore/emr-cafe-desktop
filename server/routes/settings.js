@@ -8,13 +8,20 @@ router.get("/", async (req, res) => {
   try {
     const connection = getTenantDb(req.tenantDbName);
     const Settings = SettingsModel(connection);
-    // Her tenant'ta 1 tane settings kaydı olacak
-    let settings = await Settings.findOne();
+
+    let settings = await Settings.findOne({ tenant: req.tenantDbName });
+
     if (!settings) {
-      // Yoksa default kayıt oluştur
-      settings = new Settings();
+      // Yeni default ayarlar
+      settings = new Settings({
+        tenant: req.tenantDbName,
+        menuTitle: "Menü",
+        logoUrl: "",
+        currency: "₺",
+      });
       await settings.save();
     }
+
     res.json(settings);
   } catch (err) {
     console.error("Ayar okuma hatası:", err);
@@ -28,13 +35,19 @@ router.post("/", async (req, res) => {
     const connection = getTenantDb(req.tenantDbName);
     const Settings = SettingsModel(connection);
 
-    // Tek doküman güncelleme/upsert
-    let settings = await Settings.findOne();
+    const data = {
+      ...req.body,
+      tenant: req.tenantDbName, // her ihtimale karşı tenant eşlemesi
+    };
+
+    let settings = await Settings.findOne({ tenant: req.tenantDbName });
+
     if (!settings) {
-      settings = new Settings(req.body);
+      settings = new Settings(data);
     } else {
-      Object.assign(settings, req.body);
+      Object.assign(settings, data);
     }
+
     await settings.save();
     res.json({ message: "Ayarlar güncellendi", settings });
   } catch (err) {
