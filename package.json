@@ -46,6 +46,9 @@
       "client/dist/**/*",
       "config/**/*"
     ],
+    "asarUnpack": [
+      "electron/ip-config.json"
+    ],
     "extraResources": [
       {
         "from": "invoices/",

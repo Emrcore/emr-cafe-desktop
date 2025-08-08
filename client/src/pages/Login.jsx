@@ -32,14 +32,17 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900 relative">
-      {/* Geri Butonu */}
-      <button
-        onClick={() => navigate("/")}
-        className="absolute top-4 left-4 text-white hover:text-blue-400 flex items-center"
-      >
-        <ArrowLeft className="mr-1" /> Geri
-      </button>
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900 relative">
+    {/* Geri Butonu */}
+    <button
+      onClick={() => {
+        localStorage.removeItem("user"); // İsteğe bağlı: kullanıcı login olmuşsa sil
+        navigate("/tenant"); // Garantili yönlendirme
+      }}
+      className="absolute top-4 left-4 text-white hover:text-blue-400 flex items-center"
+    >
+      <ArrowLeft className="mr-1" /> Geri
+    </button>
 
       <motion.form
         onSubmit={handleSubmit}

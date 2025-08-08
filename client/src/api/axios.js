@@ -1,24 +1,32 @@
 import axios from "axios";
 
-// ?? Subdomain'den tenant çýkar (örn: demo.cafe.emrcore.com.tr › demo)
+// Subdomain'den tenant çýkar (örn: demo.cafe.emrcore.com.tr › "demo")
 const getTenantId = () => {
-  const host = window.location.hostname;
-  if (host.endsWith(".cafe.emrcore.com.tr")) {
-    return host.split(".")[0]; // "demo"
-  }
-  return null; // localhost veya geçersiz durumlar
+  const host = window.location?.hostname || "";
+  return host.endsWith(".cafe.emrcore.com.tr") ? host.split(".")[0] : null;
 };
 
+// Baz URL'yi belirle (Electron > Prod Web > Dev)
 const getBaseURL = () => {
-  const host = window.location.hostname;
+  // 1) Electron: preload üzerinden ip-config.json'daki serverUrl
+  const electronUrl = window.electronAPI?.getServerUrl?.();
+  if (electronUrl) {
+    return `${electronUrl.replace(/\/+$/, "")}/api`; // sona /api ekle
+  }
+
+  // 2) Prod Web (subdomain)
+  const host = window.location?.hostname || "";
   if (host.endsWith(".cafe.emrcore.com.tr")) {
     return `https://${host}/api`;
   }
-  return "/api"; // localhost için fallback
+
+  // 3) Dev fallback
+  return "http://localhost:3001/api";
 };
 
 const instance = axios.create({
   baseURL: getBaseURL(),
+  withCredentials: true,
   headers: {
     "Cache-Control": "no-cache",
     Pragma: "no-cache",
@@ -26,7 +34,7 @@ const instance = axios.create({
   },
 });
 
-// ? Her isteðe tenant header ekle
+// Her isteðe tenant header ekle (sadece prod subdomain'de anlamlý)
 instance.interceptors.request.use((config) => {
   const tenantId = getTenantId();
   if (tenantId) {
@@ -35,7 +43,7 @@ instance.interceptors.request.use((config) => {
   return config;
 });
 
-// ? Abonelik süresi dolduysa yönlendir
+// Abonelik süresi dolduysa yönlendir
 instance.interceptors.response.use(
   (res) => res,
   (err) => {
