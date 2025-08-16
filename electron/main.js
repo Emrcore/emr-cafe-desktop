@@ -1,51 +1,95 @@
 // main.js
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell, globalShortcut } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { printReceipt, printKitchen } = require("./printer");
 const { autoUpdater } = require("electron-updater");
 
-// —— Tek instance ——
-if (!app.requestSingleInstanceLock()) {
-  app.quit();
-}
+// —— Tek instance —— //
+if (!app.requestSingleInstanceLock()) app.quit();
 app.setAppUserModelId("com.emrcore.cafe");
 
-// Logger (ops.)
+// —— Logger (opsiyonel) —— //
 try {
   const log = require("electron-log");
   autoUpdater.logger = log;
   autoUpdater.logger.transports.file.level = "info";
 } catch (_) {}
 
-function readServerUrl() {
-  const candidates = [
-    // Paketlenmiş senaryo (extraResources / asarUnpack)
+// —— Yardımcılar —— //
+const isValidTenant = (t) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test((t || "").trim());
+const normalizeBase = (url) => (url ? url.replace(/\/+$/, "") : null);
+
+function readJsonSafe(p) {
+  try {
+    if (!fs.existsSync(p)) return null;
+    return JSON.parse(fs.readFileSync(p, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function readTenantId() {
+  // 1) ENV
+  if (isValidTenant(process.env.EMR_TENANT)) return process.env.EMR_TENANT.trim();
+
+  // 2) Paket ile gelen dosyalar (build’e koymak istersen)
+  const candidateTenantFiles = [
+    path.join(process.resourcesPath, "electron", "tenant.json"),
+    path.join(process.resourcesPath, "app.asar.unpacked", "electron", "tenant.json"),
+    path.join(__dirname, "tenant.json"),
+  ];
+  for (const p of candidateTenantFiles) {
+    const data = readJsonSafe(p);
+    const t = data?.tenantId;
+    if (isValidTenant(t)) return t.trim();
+  }
+
+  // 3) Kullanıcı verisi (runtime’da yazılabilir)
+  const userTenantPath = path.join(app.getPath("userData"), "tenant.json");
+  const userTenant = readJsonSafe(userTenantPath)?.tenantId;
+  if (isValidTenant(userTenant)) return userTenant.trim();
+
+  return null;
+}
+
+function readServerBaseUrl() {
+  const cfgCandidates = [
+    // Paket
     path.join(process.resourcesPath, "electron", "ip-config.json"),
     path.join(process.resourcesPath, "app.asar.unpacked", "electron", "ip-config.json"),
-    // Geliştirme/sandbox
+    // Geliştirme
     path.join(__dirname, "ip-config.json"),
     path.join(process.cwd(), "electron", "ip-config.json"),
     path.join(process.cwd(), "ip-config.json"),
   ];
 
-  for (const p of candidates) {
-    try {
-      if (fs.existsSync(p)) {
-        const { serverUrl } = JSON.parse(fs.readFileSync(p, "utf8"));
-        if (typeof serverUrl === "string" && serverUrl.trim()) {
-          const base = serverUrl.trim().replace(/\/+$/, "");
-          return base;
-        }
-      }
-    } catch (_) {}
+  let cfg = null;
+  for (const p of cfgCandidates) {
+    const c = readJsonSafe(p);
+    if (c) { cfg = c; break; }
   }
-  // Fallback
-  return "http://185.149.103.223:3001";
+
+  // 1) serverUrl (doğrudan)
+  if (typeof cfg?.serverUrl === "string" && cfg.serverUrl.trim()) {
+    return normalizeBase(cfg.serverUrl.trim());
+  }
+
+  // 2) serverUrlTemplate + tenant
+  if (typeof cfg?.serverUrlTemplate === "string" && cfg.serverUrlTemplate.includes("{tenant}")) {
+    const tenant = readTenantId();
+    if (isValidTenant(tenant)) {
+      const filled = cfg.serverUrlTemplate.replace("{tenant}", tenant);
+      return normalizeBase(filled);
+    }
+  }
+
+  // —— IP fallback YOK —— //
+  return null;
 }
 
+// —— Updater bağla —— //
 let win;
-
 function wireAutoUpdater() {
   autoUpdater.allowPrerelease = false;
   autoUpdater.autoDownload = true;
@@ -79,6 +123,7 @@ function wireAutoUpdater() {
   });
 }
 
+// —— Pencere —— //
 function createWindow() {
   win = new BrowserWindow({
     width: 1200,
@@ -88,19 +133,46 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      backgroundThrottling: false
+      backgroundThrottling: false,
     },
   });
 
-  const base = readServerUrl();
+  // Dış bağlantıları sistem tarayıcısında aç
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: "deny" };
+  });
 
-  // Updater event’lerini önce bağla
+  // Prod’da hızlı debug: Ctrl+Shift+I
+  app.whenReady().then(() => {
+    globalShortcut.register("Control+Shift+I", () => {
+      const focused = BrowserWindow.getFocusedWindow();
+      if (focused) focused.webContents.openDevTools();
+    });
+  });
+
+  // Updater
   wireAutoUpdater();
   autoUpdater.checkForUpdatesAndNotify();
 
-  // Dış URL’yi yükle
+  const base = readServerBaseUrl();
+  if (!base) {
+    dialog.showMessageBoxSync({
+      type: "error",
+      title: "Sunucu adresi bulunamadı",
+      message:
+        "Sunucu URL’i oluşturulamadı.\n" +
+        "- ip-config.json içinde 'serverUrl' ya da\n" +
+        "- 'serverUrlTemplate' (örn: https://{tenant}.cafe.emrcore.com.tr) belirtin.\n" +
+        "- Tenant kimliğini ENV (EMR_TENANT) ya da tenant.json ile sağlayın.",
+      buttons: ["Kapat"]
+    });
+    app.quit();
+    return;
+  }
+
   try {
-    win.loadURL(base);
+    win.loadURL(base); // Örn: https://demo.cafe.emrcore.com.tr
   } catch (e) {
     dialog.showMessageBox(win, {
       type: "error",
@@ -108,23 +180,24 @@ function createWindow() {
       message: `Sunucuya bağlanılamadı: ${base}\nLütfen internet bağlantınızı veya sunucuyu kontrol edin.`
     });
   }
-
-  // win.webContents.openDevTools(); // opsiyonel
 }
 
-// Yazdırma IPC’leri
+// —— Yazdırma IPC’leri —— //
 ipcMain.handle("print-receipt", async (_event, data) => {
   try { await printReceipt(data); }
   catch (err) { console.error("Fiş yazdırılırken hata:", err); }
 });
+
 ipcMain.handle("print-kitchen", async (_event, data) => {
   try { await printKitchen(data); }
   catch (err) { console.error("Mutfak fişi yazdırılırken hata:", err); }
 });
+
 ipcMain.on("print-pdf", (_event, filePath) => {
   // PDF yazdırma/önizleme işlemleri
 });
 
+// —— App lifecycle —— //
 app.whenReady().then(() => {
   createWindow();
   app.on("activate", () => {
@@ -140,5 +213,6 @@ app.on("second-instance", () => {
 });
 
 app.on("window-all-closed", () => {
+  globalShortcut.unregisterAll();
   if (process.platform !== "darwin") app.quit();
 });
