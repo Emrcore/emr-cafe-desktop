@@ -1,12 +1,13 @@
-const mongoose = require("mongoose");
+// models/Tenant.js
+const { Schema } = require("mongoose");
 
-const tenantSchema = new mongoose.Schema({
-  name: String,
-  subdomain: { type: String, unique: true },
-  systemType: String,
-  createdAt: { type: Date, default: Date.now },
-  subscriptionEnd: { type: Date, required: true },
-  // Diðer alanlar...
-});
+module.exports = (conn) => {
+  if (conn.models.Tenant) return conn.models.Tenant;
+  const TenantSchema = new Schema({
+    subdomain:   { type: String, required: true, index: true },
+    systemType:  { type: String, required: true, index: true }, // "cafe"
+    subscriptionEnd: { type: Date },
+  }, { timestamps: true });
 
-module.exports = mongoose.model("Tenant", tenantSchema);
+  return conn.model("Tenant", TenantSchema, "tenants");
+};

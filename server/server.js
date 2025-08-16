@@ -26,6 +26,7 @@ const reportsAdvancedRouter = require("./routes/reportsAdvanced");
 const ordersRouter = require("./routes/orders");
 const invoiceRouter = require("./routes/invoices");
 const callRoutes = require("./routes/calls");
+const tableCategoriesRouter = require("./routes/tableCategories");
 
 // ? MIDDLEWARE
 const tenantMiddleware = require("./middleware/tenant");
@@ -75,6 +76,7 @@ app.use("/api/license", licenseRouter);
 app.use("/api/tables", tableRouter);
 app.use("/api/sales", salesRouter);
 app.use("/api/pos", posRouter);
+app.use("/api/table-categories", tableCategoriesRouter);
 app.use("/api/reports-advanced", reportsAdvancedRouter);
 app.use("/api/invoices", invoiceRouter);
 app.use("/api/orders", ordersRouter); // özel olarak yukarýda middleware uygulandý zaten

@@ -1,42 +1,61 @@
-// db.js
+// server/db.js
 const mongoose = require("mongoose");
+const EMR_DOMAIN = "emrcore.com.tr";
 
-// Connection cache — her tenant'ýn db'si için tek baðlantý
-const connections = {};
+// Ayný çözüm mantýðýný burada da tutalým; middleware çalýþmasa da tenant'ý çýkarabilelim.
+function resolveTenantAndSystem(req) {
+  // 1) Daha önce ayarlanmýþsa kullan
+  const t1 = req?.tenant?.id || req?.tenant?.tenantId || null;
+  const s1 = req?.tenant?.systemType || req?.systemType || null;
+  if (t1 && s1) return { tenant: t1, systemType: s1 };
 
-/**
- * Her tenant için uygun Mongoose baðlantýsý döndürür.
- * @param {string} dbName - Tenant veritabaný adý (örn: emr-cafe_lastsummer)
- * @returns {mongoose.Connection}
- */
-function getTenantDb(dbName) {
-  if (!dbName) throw new Error("dbName belirtilmedi!");
+  // 2) Header / query fallback
+  let tenant =
+    (req.headers?.["x-tenant-id"] ||
+      req.headers?.["x-tenant"] ||
+      req.query?.tenant ||
+      "") + "";
+  let systemType =
+    (req.headers?.["x-system-type"] ||
+      req.query?.systemtype ||
+      req.query?.system ||
+      "") + "";
+  tenant = tenant.toLowerCase().trim();
+  systemType = systemType.toLowerCase().trim();
 
-  // Baðlantý önceden açýldýysa onu kullan
-  if (connections[dbName]) {
-    return connections[dbName];
+  // 3) Host: sahintepesi.cafe.emrcore.com.tr
+  const rawHost = String(req.headers?.host || "").toLowerCase().split(":")[0];
+  if ((!tenant || !systemType) && rawHost.endsWith(EMR_DOMAIN)) {
+    const m = rawHost.match(/^([^.]+)\.([^.]+)\.emrcore\.com\.tr$/);
+    if (m) {
+      tenant ||= m[1];       // sahintepesi
+      systemType ||= m[2];   // cafe
+    }
   }
-
-  // Yeni baðlantý aç
-  const uri = `mongodb://127.0.0.1:27017/${dbName}`;
-  const connection = mongoose.createConnection(uri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-
-  // Baðlantý cache'le
-  connections[dbName] = connection;
-
-  // Hatalarý logla
-  connection.on("error", (err) => {
-    console.error(`? [${dbName}] baðlantý hatasý:`, err);
-  });
-
-  connection.once("open", () => {
-    console.log(`? [${dbName}] veritabanýna baðlanýldý`);
-  });
-
-  return connection;
+  return { tenant: tenant || null, systemType: systemType || null };
 }
 
-module.exports = getTenantDb;
+module.exports.getTenantDb = async function getTenantDb(req) {
+  // 0) Middleware zaten ayarladýysa direkt dön
+  if (req && req.db) return req.db;
+
+  // 1) Kendimiz çözmeyi deneyelim
+  const { tenant, systemType } = resolveTenantAndSystem(req || {});
+  if (!tenant || !systemType) {
+    throw new Error("TENANT_RESOLVE_FAILED: tenant veya systemType bulunamadý");
+  }
+
+  // 2) DB adý ve baðlantý
+  const dbName = `emr-${systemType}_${tenant}`; // örn: emr-cafe_sahintepesi
+  const conn = mongoose.connection.useDb(dbName);
+
+  // 3) Geriye de not düþelim ki sonraki katmanlar görsün
+  if (req) {
+    req.db = conn;
+    req.tenantDbName = dbName;
+    req.systemType = req.systemType || systemType;
+    req.tenant = req.tenant || { id: tenant, systemType };
+  }
+
+  return conn;
+};

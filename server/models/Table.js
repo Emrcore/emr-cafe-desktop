@@ -1,30 +1,55 @@
+// models/Table.js
 const mongoose = require("mongoose");
 
-const TableSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    status: { type: String, default: "empty" }, // örn: empty, occupied, reserved
-    orders: [
-      {
-        id: { type: String, required: true },       // ürün ID'si (veritabaný ID olabilir)
-        name: { type: String, required: true },     // ürün adý
-        price: { type: Number, required: true },    // ürün fiyatý
-        qty: { type: Number, required: true },      // ürün adeti
-        notes: { type: String },                    // opsiyonel açýklama
-        category: { type: String },                 // opsiyonel kategori
-      },
-    ],
-  },
-  {
-    timestamps: true, // createdAt & updatedAt otomatik
-  }
-);
-
 module.exports = (connection) => {
-  // Ayný model iki kez tanýmlanýrsa hata verir; bu yüzden kontrol þart
-  try {
-    return connection.model("Table");
-  } catch (e) {
-    return connection.model("Table", TableSchema);
-  }
+  // Ayný connection'da model zaten derlenmiþse direkt onu döndür.
+  if (connection.models.Table) return connection.models.Table;
+
+  // Alt belge (sipariþ satýrý)
+  const OrderItemSchema = new mongoose.Schema(
+    {
+      id: { type: String, required: true, trim: true },   // ürün ID (string/ObjectId-string)
+      name: { type: String, required: true, trim: true }, // ürün adý
+      price: { type: Number, required: true, min: 0 },    // birim fiyat
+      qty: { type: Number, required: true, min: 1, default: 1 }, // adet
+      notes: { type: String, trim: true, default: "" },   // opsiyonel açýklama
+      category: { type: String, trim: true },             // opsiyonel (ürün kategori adý)
+    },
+    { _id: false }
+  );
+
+  const TableSchema = new mongoose.Schema(
+    {
+      name: { type: String, required: true, trim: true },
+      status: {
+        type: String,
+        enum: ["empty", "occupied", "reserved"],
+        default: "empty",
+        index: true,
+      },
+      capacity: { type: Number, default: 0, min: 0 },
+
+      // Masa kategorisi (örn: Bahçe, Teras, VIP)
+      categoryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "TableCategory", // Ayný connection’da "TableCategory" modeli olmalý
+        default: null,
+        index: true,
+      },
+
+      orders: { type: [OrderItemSchema], default: [] },
+    },
+    {
+      timestamps: true, // createdAt & updatedAt
+      toJSON: { virtuals: true, versionKey: false },
+      toObject: { virtuals: true, versionKey: false },
+    }
+  );
+
+  // Ýsim için performans indeks (unique istersen aþaðýdaki satýrý aç,
+  // ama önce tenant DB'lerinde çakýþma olup olmayacaðýný kontrol et)
+  // TableSchema.index({ name: 1 }, { unique: true });
+
+  // Koleksiyon adýný açýkça veriyoruz: "tables"
+  return connection.model("Table", TableSchema, "tables");
 };

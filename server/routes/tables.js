@@ -1,191 +1,233 @@
-console.log("✅ /api/tables router yüklendi");
+// server/routes/tables.js
+if (!global.__tablesRouterLogged) {
+  console.log("✅ /api/tables router yüklendi");
+  global.__tablesRouterLogged = true;
+}
 
 const express = require("express");
 const router = express.Router();
-const getTenantDb = require("../db");
-const TableModel = require("../models/Table");
-const OrderModel = require("../models/Order");
+const { getTenantDb } = require("../db");
+const TableFactory = require("../models/Table");
+const TableCategoryFactory = require("../models/TableCategory"); // <-- var
+const OrderFactory = require("../models/Order"); // varsa
 
-const getTableModel = (req) => {
-  const connection = getTenantDb(req.tenantDbName);
-  return TableModel(connection);
-};
+// Tek noktadan model kur
+async function getModels(req) {
+  const conn = await getTenantDb(req); // ✅ tenantMiddleware olmasa da içerde çözüyor
+  const TableCategory = TableCategoryFactory ? TableCategoryFactory(conn) : null;
+  const Table = TableFactory(conn);
+  const Order = OrderFactory ? OrderFactory(conn) : null;
+  return { Table, TableCategory, Order };
+}
 
-const getOrderModel = (req) => {
-  const connection = getTenantDb(req.tenantDbName);
-  return OrderModel(connection);
-};
+// Ortak: tablo listesini TR + sayısal sıralama ile getir
+function buildQuery(Table, TableCategory) {
+  let q = Table.find();
+  if (TableCategory) {
+    q = q.populate({ path: "categoryId", model: TableCategory });
+  }
+  // ������ sayısal sıralama: "Masa 2" -> "Masa 10"dan önce
+  return q.collation({ locale: "tr", numericOrdering: true }).sort({ name: 1 });
+}
+
+async function listTables(Table, TableCategory) {
+  return await buildQuery(Table, TableCategory);
+}
 
 // ✅ Tüm masaları getir
 router.get("/", async (req, res) => {
   try {
-    const Table = getTableModel(req);
-    const tables = await Table.find();
+    const { Table, TableCategory } = await getModels(req);
+    const tables = await listTables(Table, TableCategory);
     res.json(tables);
   } catch (err) {
     console.error("Masa listeleme hatası:", err);
-    res.status(500).json({ message: "Sunucu hatası" });
+    res.status(500).json({ message: "Sunucu hatası", detail: err.message });
   }
 });
 
 // ✅ Tek masa getir
 router.get("/:id", async (req, res) => {
   try {
-    const Table = getTableModel(req);
-    const table = await Table.findById(req.params.id);
+    const { Table, TableCategory } = await getModels(req);
+    let q = Table.findById(req.params.id);
+    if (TableCategory) {
+      q = q.populate({ path: "categoryId", model: TableCategory });
+    }
+    const table = await q;
     if (!table) return res.status(404).json({ error: "Masa bulunamadı" });
     res.json(table);
   } catch (err) {
-    res.status(500).json({ message: "Sunucu hatası" });
+    console.error("Tek masa hatası:", err);
+    res.status(500).json({ message: "Sunucu hatası", detail: err.message });
   }
 });
 
 // ✅ Masa ekle
 router.post("/", async (req, res) => {
   try {
-    const Table = getTableModel(req);
-    const newTable = new Table({
-      name: req.body.name,
+    const { Table, TableCategory } = await getModels(req);
+    const { name, categoryId, capacity } = req.body || {};
+    if (!name?.trim()) return res.status(400).json({ message: "Masa adı zorunlu" });
+
+    const newTable = await Table.create({
+      name: name.trim(),
       status: "empty",
       orders: [],
+      categoryId: categoryId || null,
+      capacity: Number.isFinite(+capacity) ? +capacity : 0,
     });
-    await newTable.save();
-    req.io.emit("tables:update", await Table.find());
+
+    // Güncel listeyi yayınla (TR + numericOrdering)
+    const list = await listTables(Table, TableCategory);
+    req.io?.emit("tables:update", list);
     res.status(201).json(newTable);
   } catch (err) {
-    res.status(500).json({ message: "Sunucu hatası" });
+    console.error("Masa ekleme hatası:", err);
+    res.status(500).json({ message: "Sunucu hatası", detail: err.message });
   }
 });
 
 // ✅ Masa sil
 router.delete("/:id", async (req, res) => {
   try {
-    const Table = getTableModel(req);
+    const { Table, TableCategory } = await getModels(req);
     await Table.findByIdAndDelete(req.params.id);
-    req.io.emit("tables:update", await Table.find());
+
+    const list = await listTables(Table, TableCategory);
+    req.io?.emit("tables:update", list);
     res.status(204).send();
   } catch (err) {
-    res.status(500).json({ message: "Sunucu hatası" });
+    console.error("Masa silme hatası:", err);
+    res.status(500).json({ message: "Sunucu hatası", detail: err.message });
   }
 });
 
-// ✅ Masaya ürün ekle + mutfağa bildir
+// ✅ Masaya ürün ekle + not + mutfağa bildir
 router.post("/:id/order", async (req, res) => {
   try {
-    const Table = getTableModel(req);
-    const Order = getOrderModel(req);
+    const { Table, TableCategory, Order } = await getModels(req);
 
     const table = await Table.findById(req.params.id);
     if (!table) return res.status(404).json({ error: "Masa bulunamadı" });
 
-    const order = req.body;
-    if (!order.id || !order.name || typeof order.price !== "number") {
+    const { id, name, price, qty = 1, notes = "", category } = req.body || {};
+    if (!id || !name || typeof price !== "number")
       return res.status(400).json({ message: "Eksik ürün verisi" });
-    }
 
-    // ✅ Masaya siparişi ekle
-    const existing = table.orders.find((o) => o.id === order.id);
+    const existing = table.orders.find(
+      (o) => o.id === id && (o.notes || "") === (notes || "")
+    );
     if (existing) {
-      existing.qty += 1;
+      existing.qty += Number(qty) || 1;
     } else {
-      table.orders.push({ ...order, qty: 1 });
+      table.orders.push({
+        id,
+        name,
+        price,
+        qty: Number(qty) || 1,
+        notes,
+        category,
+      });
     }
 
     table.status = "occupied";
     await table.save();
 
-    // ✅ Mutfak siparişi oluştur
-    const newOrder = new Order({
-      table: table._id,
-      items: [{ name: order.name, quantity: 1 }],
-    });
-    const savedOrder = await newOrder.save();
-    const populatedOrder = await Order.findById(savedOrder._id).populate({
-      path: "table",
-      model: Table,
-      select: "name",
-    });
+    if (Order) {
+      const savedOrder = await Order.create({
+        table: table._id,
+        items: [{ name, quantity: Number(qty) || 1, notes }],
+      });
+      try {
+        const populatedOrder = await Order.findById(savedOrder._id).populate({
+          path: "table",
+          model: Table,
+          select: "name",
+        });
+        req.io?.emit("new-order", populatedOrder);
+      } catch (e) {
+        console.warn("Order populate yayın uyarısı:", e.message);
+      }
+    }
 
-    // ������ Canlı bildirim
-    req.io.emit("tables:update", await Table.find());
-    req.io.emit("new-order", populatedOrder);
-
+    const list = await listTables(Table, TableCategory);
+    req.io?.emit("tables:update", list);
     res.json(table);
   } catch (err) {
     console.error("Sipariş ekleme hatası:", err);
-    res.status(500).json({ message: "Sunucu hatası" });
+    res.status(500).json({ message: "Sunucu hatası", detail: err.message });
   }
 });
 
 // ✅ Masadan ürün sil
 router.post("/:id/remove", async (req, res) => {
   try {
-    const Table = getTableModel(req);
+    const { Table, TableCategory } = await getModels(req);
     const table = await Table.findById(req.params.id);
     if (!table) return res.status(404).json({ error: "Masa bulunamadı" });
 
-    const productId = req.body.id;
+    const productId = req.body?.id;
     table.orders = table.orders.filter((o) => o.id !== productId);
     if (table.orders.length === 0) table.status = "empty";
 
     await table.save();
-    req.io.emit("tables:update", await Table.find());
+    const list = await listTables(Table, TableCategory);
+    req.io?.emit("tables:update", list);
     res.json(table);
   } catch (err) {
-    res.status(500).json({ message: "Sunucu hatası" });
+    console.error("Ürün silme hatası:", err);
+    res.status(500).json({ message: "Sunucu hatası", detail: err.message });
   }
 });
 
 // ✅ Ödeme işlemi
 router.post("/:id/pay", async (req, res) => {
   try {
-    const { paymentMethod } = req.body;
-    const Table = getTableModel(req);
+    const { Table, TableCategory } = await getModels(req);
     const table = await Table.findById(req.params.id);
     if (!table) return res.status(404).json({ error: "Masa bulunamadı" });
-
-    const total = table.orders.reduce((sum, item) => sum + item.price * item.qty, 0);
 
     table.orders = [];
     table.status = "empty";
     await table.save();
-    req.io.emit("tables:update", await Table.find());
 
+    const list = await listTables(Table, TableCategory);
+    req.io?.emit("tables:update", list);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ message: "Sunucu hatası" });
+    console.error("Ödeme hatası:", err);
+    res.status(500).json({ message: "Sunucu hatası", detail: err.message });
   }
 });
 
 // ✅ Masa taşıma işlemi
 router.post("/transfer", async (req, res) => {
   try {
-    const { fromTableId, toTableId } = req.body;
-    if (!fromTableId || !toTableId) {
+    const { fromTableId, toTableId } = req.body || {};
+    if (!fromTableId || !toTableId)
       return res.status(400).json({ message: "Gerekli masa ID'leri eksik" });
-    }
 
-    const Table = getTableModel(req);
+    const { Table, TableCategory } = await getModels(req);
     const fromTable = await Table.findById(fromTableId);
     const toTable = await Table.findById(toTableId);
-
-    if (!fromTable || !toTable) {
+    if (!fromTable || !toTable)
       return res.status(404).json({ message: "Masa(lar) bulunamadı" });
-    }
 
-    toTable.orders = [...toTable.orders, ...fromTable.orders];
-    toTable.status = "occupied";
+    toTable.orders.push(...fromTable.orders);
+    toTable.status = toTable.orders.length ? "occupied" : toTable.status;
     fromTable.orders = [];
     fromTable.status = "empty";
 
     await fromTable.save();
     await toTable.save();
 
-    req.io.emit("tables:update", await Table.find());
+    const list = await listTables(Table, TableCategory);
+    req.io?.emit("tables:update", list);
     res.json({ message: "Sipariş başarıyla taşındı" });
   } catch (err) {
     console.error("Masa taşıma hatası:", err);
-    res.status(500).json({ message: "Sunucu hatası" });
+    res.status(500).json({ message: "Sunucu hatası", detail: err.message });
   }
 });
 

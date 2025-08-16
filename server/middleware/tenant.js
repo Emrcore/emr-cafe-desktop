@@ -1,54 +1,67 @@
+// middleware/tenant.js
 const mongoose = require("mongoose");
-const SubscriptionModel = require("../models/Subscription");
 const path = require("path");
+const SubscriptionModel = require("../models/Subscription");
 
 const Subscription = SubscriptionModel(mongoose.connection);
+const EMR_DOMAIN = "emrcore.com.tr";
+const DEFAULT_SYSTEM = "cafe";
 
 module.exports = async function tenantMiddleware(req, res, next) {
   try {
-    // 1. Öncelik: Header üzerinden gelen tenant bilgisi
-    const tenantId = req.headers["x-tenant-id"];
+    const rawHost = String(req.headers.host || "").toLowerCase().split(":")[0];
 
-    // 2. Alternatif: host üzerinden tenant ve sistem tipi çıkar (demo.cafe.emrcore.com.tr)
-    const host = req.headers.host || "";
-    const parts = host.split(".");
+    // 1) Header / query fallback (dev/test kolaylığı)
+    let tenant = (req.headers["x-tenant-id"] || req.headers["x-tenant"] || req.query.tenant || "").toLowerCase();
+    let systemType = (req.headers["x-system-type"] || req.query.systemtype || req.query.system || "").toLowerCase();
 
-    let subdomain = tenantId || null;
-    let systemType = null;
-
-    if (!subdomain && parts.length >= 3 && host.includes("emrcore.com.tr")) {
-      subdomain = parts[0];      // "demo"
-      systemType = parts[1];     // "cafe"
+    // 2) Host'tan çıkar (örn: sahintepesi.cafe.emrcore.com.tr)
+    if (!tenant && rawHost.endsWith(EMR_DOMAIN)) {
+      const m = rawHost.match(/^([^.]+)\.([^.]+)\.emrcore\.com\.tr$/);
+      if (m) {
+        tenant = m[1];                 // sahintepesi
+        systemType = systemType || m[2]; // cafe
+      }
     }
 
-    if (!subdomain || !host.includes("emrcore.com.tr")) {
-      console.warn("⚠️ Subdomain veya tenantId bulunamadı. middleware atlandı.");
-      return next();
-    }
+    if (!systemType) systemType = DEFAULT_SYSTEM;
 
-    // Eğer x-tenant-id varsa, sistemType da header'dan gelmeli veya varsayılmalı
-    if (!systemType) {
-      systemType = req.headers["x-system-type"] || "cafe"; // Default: cafe
-    }
-
-    // Abonelik kontrolü
-    const subscription = await Subscription.findOne({ tenantId: subdomain, systemType });
-    if (!subscription) {
+    // 3) Basit doğrulama
+    if (!tenant || !/^[a-z0-9._-]+$/.test(tenant) || !/^[a-z0-9._-]+$/.test(systemType)) {
       return res.status(404).json({ message: "İşletme bulunamadı" });
     }
 
-    // ✅ CRITICAL LINE: tenant database bağlantısını ayarla
-    const dbName = `emr-${systemType}_${subdomain}`;
-    req.db = mongoose.connection.useDb(dbName);
-    req.tenant = subscription;
+    tenant = tenant.trim().toLowerCase();
+    systemType = systemType.trim().toLowerCase();
+
+    // 4) Subscription opsiyonel (bloklama yok; abonelik kontrolünü subscriptionCheck yapsın)
+    let subscription = null;
+    try {
+      subscription = await Subscription.findOne({ tenantId: tenant, systemType }).lean();
+    } catch (e) {
+      console.warn("⚠️ Subscription lookup error:", e.message);
+    }
+
+    // 5) Tenant DB bağlantısı ve path
+    const dbName = `emr-${systemType}_${tenant}`;     // örn: emr-cafe_sahintepesi
+    const tenantConn = mongoose.connection.useDb(dbName);
+
+    req.tenant = {
+      id: tenant,
+      systemType,
+      subscriptionExists: !!subscription,
+      subscription, // null olabilir
+    };
     req.systemType = systemType;
     req.tenantDbName = dbName;
-    req.dataPath = path.join("/var/www/data", systemType, subdomain);
+    req.db = tenantConn;
+    req.dataPath = path.join("/var/www/data", systemType, tenant);
 
-    console.log("✅ tenantMiddleware çalıştı:", dbName);
+    // console.log("✅ tenantMiddleware:", { host: rawHost, tenant, systemType, dbName });
+
     next();
   } catch (err) {
-    console.error("❌ tenantMiddleware hatası:", err.message);
+    console.error("❌ tenantMiddleware hatası:", err);
     res.status(500).json({ message: "Sunucu hatası: " + err.message });
   }
 };

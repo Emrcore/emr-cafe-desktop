@@ -1,18 +1,18 @@
+// routes/settings.js
 const express = require("express");
 const router = express.Router();
-const getTenantDb = require("../db");
-const SettingsModel = require("../models/Settings");
+const { getTenantDb } = require("../db");            // ✅ sadece gereken fonksiyon
+const SettingsModelFactory = require("../models/Settings"); // ✅ factory
 
-// Ayarları getir
+// Ayarları getir (yoksa varsayılan oluştur)
 router.get("/", async (req, res) => {
   try {
-    const connection = getTenantDb(req.tenantDbName);
-    const Settings = SettingsModel(connection);
+    const connection = await getTenantDb(req);       // ✅ await
+    const Settings = SettingsModelFactory(connection);
 
     let settings = await Settings.findOne({ tenant: req.tenantDbName });
 
     if (!settings) {
-      // Yeni default ayarlar
       settings = new Settings({
         tenant: req.tenantDbName,
         menuTitle: "Menü",
@@ -29,15 +29,15 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Ayarları güncelle
+// Ayarları güncelle / oluştur
 router.post("/", async (req, res) => {
   try {
-    const connection = getTenantDb(req.tenantDbName);
-    const Settings = SettingsModel(connection);
+    const connection = await getTenantDb(req);       // ✅ await
+    const Settings = SettingsModelFactory(connection);
 
     const data = {
       ...req.body,
-      tenant: req.tenantDbName, // her ihtimale karşı tenant eşlemesi
+      tenant: req.tenantDbName, // güvenlik: doğru tenant'a yaz
     };
 
     let settings = await Settings.findOne({ tenant: req.tenantDbName });
@@ -49,7 +49,7 @@ router.post("/", async (req, res) => {
     }
 
     await settings.save();
-    res.json({ message: "Ayarlar güncellendi", settings });
+    res.status(200).json({ message: "Ayarlar güncellendi", settings });
   } catch (err) {
     console.error("Ayar güncelleme hatası:", err);
     res.status(500).json({ message: "Sunucu hatası" });

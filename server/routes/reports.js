@@ -1,29 +1,35 @@
+// routes/reports.js
 const express = require("express");
 const router = express.Router();
 const XLSX = require("xlsx");
-const getTenantDb = require("../db");
-const SaleModel = require("../models/Sale");
+const { getTenantDb } = require("../db");
+const SaleModelFactory = require("../models/Sale");
 
 // JSON rapor (isteğe bağlı tarih filtreli)
 router.get("/", async (req, res) => {
   try {
-    const connection = getTenantDb(req.tenantDbName);
-    const Sale = SaleModel(connection);
+    const connection = await getTenantDb(req);         // ✅ await
+    const Sale = SaleModelFactory(connection);
 
     const { date } = req.query;
-    let filter = {};
+    const filter = {};
+
     if (date) {
-      // Yalnızca belirli günün satışları (örn: "2025-07-23")
-      filter.date = {
-        $gte: new Date(date + "T00:00:00.000Z"),
-        $lte: new Date(date + "T23:59:59.999Z"),
-      };
+      // "YYYY-MM-DD" için gün aralığı
+      const start = new Date(`${date}T00:00:00.000Z`);
+      const end = new Date(`${date}T23:59:59.999Z`);
+
+      // Şemanızda createdAt varsa onu, yoksa date alanını kullan
+      filter.$or = [
+        { createdAt: { $gte: start, $lte: end } },
+        { date: { $gte: start, $lte: end } },
+      ];
     }
 
-    const sales = await Sale.find(filter);
+    const sales = await Sale.find(filter).lean();
     res.json(sales);
   } catch (err) {
-    console.error("Satış raporu okuma hatası:", err.message);
+    console.error("Satış raporu okuma hatası:", err);
     res.status(500).json({ message: "Sunucu hatası" });
   }
 });
@@ -31,21 +37,21 @@ router.get("/", async (req, res) => {
 // Excel çıktısı
 router.get("/excel", async (req, res) => {
   try {
-    const connection = getTenantDb(req.tenantDbName);
-    const Sale = SaleModel(connection);
+    const connection = await getTenantDb(req);         // ✅ await
+    const Sale = SaleModelFactory(connection);
 
-    const sales = await Sale.find();
+    const sales = await Sale.find().lean();
 
     const flatRows = sales.flatMap((sale) =>
-      sale.orders.map((o) => ({
-        Tarih: new Date(sale.date).toLocaleString(),
+      (sale.orders || []).map((o) => ({
+        Tarih: new Date(sale.createdAt || sale.date).toLocaleString(), // createdAt öncelik
         Masa: sale.tableId,
         Ürün: o.name,
         Adet: o.qty,
         Fiyat: o.price,
-        AraToplam: o.price * o.qty,
-        GenelToplam: sale.total?.toFixed(2) || "",
-        Ödeme: sale.paymentMethod,
+        AraToplam: (Number(o.price || 0) * Number(o.qty || 0)).toFixed(2),
+        GenelToplam: Number(sale.total || 0).toFixed(2),
+        Ödeme: sale.paymentMethod || "",
       }))
     );
 
@@ -61,7 +67,7 @@ router.get("/excel", async (req, res) => {
     );
     res.send(buffer);
   } catch (err) {
-    console.error("Excel raporu hatası:", err.message);
+    console.error("Excel raporu hatası:", err);
     res.status(500).json({ message: "Sunucu hatası" });
   }
 });
