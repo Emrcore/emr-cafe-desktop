@@ -132,14 +132,15 @@ function openTenantPromptWindow(parent) {
     <button id="ok">Kaydet ve Yeniden Başlat</button>
     <script>
       const re=/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
-      document.getElementById('ok').onclick = async () => {
-        const t = document.getElementById('t').value.trim();
-        if(!re.test(t)){ alert('Geçersiz tenant'); return; }
-        try{
-          await window.electronAPI.setTenant(t);
-          window.close();
-        }catch(e){ alert('Kaydetme hatası: '+e); }
-      };
+  document.getElementById('ok').onclick = async () => {
+    const t = document.getElementById('t').value.trim();
+    if(!re.test(t)){ alert('Geçersiz tenant'); return; }
+    try{
+      await window.electronAPI.setTenant(t);   // userData/tenant.json
+      window.electronAPI.setTenantLocal(t);    // localStorage (preload)
+      window.close();
+    }catch(e){ alert('Kaydetme hatası: '+e); }
+  };
       window.addEventListener('keydown', (e) => { if(e.key==='Enter') document.getElementById('ok').click(); });
     </script>
   `;
