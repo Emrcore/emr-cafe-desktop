@@ -1,13 +1,13 @@
 // src/socket.js
 import { io } from "socket.io-client";
 
-const hostname = window.location.hostname;
-const isSecure = window.location.protocol === "https:";
-const protocol = isSecure ? "wss" : "ws";
-
-const socket = io(`${protocol}://${hostname}`, {
-  transports: ["websocket"],
+const baseUrl = window.electronAPI?.getServerUrl?.() || window.location.origin;
+const socket = io(baseUrl.replace(/\/+$/, ""), {
   path: "/socket.io",
+  transports: ["websocket"],
+  withCredentials: true,
 });
 
-export default socket; // ? default export
+// Hem default hem named export saðlayalým
+export default socket;
+export { socket };

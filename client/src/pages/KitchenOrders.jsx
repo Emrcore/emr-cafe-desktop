@@ -1,3 +1,4 @@
+// pages/kitchenorder.jsx
 import { useEffect, useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import axios from "../api/axios";
@@ -14,6 +15,7 @@ export default function KitchenOrders() {
   const playSound = useSound(soundFile);
   const navigate = useNavigate();
 
+  // Yetki kontrolü
   useEffect(() => {
     if (loading) return;
     if (!user || user.role !== "mutfak") {
@@ -21,11 +23,13 @@ export default function KitchenOrders() {
     }
   }, [user, loading, navigate]);
 
+  // İlk yükleme + socket olayları
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         const res = await axios.get("/orders");
-        setOrders(res.data);
+        // Backend Order.items[*].notes artık gelebilir
+        setOrders(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error("🚫 Siparişler alınamadı:", err?.response?.data || err.message);
       }
@@ -34,40 +38,64 @@ export default function KitchenOrders() {
     fetchOrders();
 
     const handleNewOrder = (newOrder) => {
+      if (!newOrder) return;
       setOrders((prev) => {
-        const tableId = newOrder.table._id || newOrder.table;
-        const existing = prev.find((o) => (o.table._id || o.table) === tableId);
+        const tableId = newOrder?.table?._id || newOrder?.table;
+        if (!tableId) return prev;
+
+        const existing = prev.find((o) => (o.table?._id || o.table) === tableId);
         if (existing) {
+          // Aynı masa kartına yeni kalemleri ekle (notes dahil)
           return prev.map((o) =>
-            (o.table._id || o.table) === tableId
-              ? { ...o, items: [...o.items, ...newOrder.items] }
+            (o.table?._id || o.table) === tableId
+              ? { ...o, items: [...(o.items || []), ...(newOrder.items || [])] }
               : o
           );
-        } else {
-          return [newOrder, ...prev];
         }
+        // Yeni kart olarak başa ekle
+        return [newOrder, ...prev];
       });
       playSound();
     };
 
     const handleCompletedOrder = (orderId) => {
+      if (!orderId) return;
       setOrders((prev) => prev.filter((order) => order._id !== orderId));
+    };
+
+    // Opsiyonel: masadaki bir satırın notu sonradan değiştiğinde canlı güncelle
+    // Backend’den şu payload gelir: { tableId, lineId, notes, itemName }
+    const handleOrderNoteUpdated = (payload) => {
+      const { tableId, lineId, notes } = payload || {};
+      if (!tableId || (lineId === undefined || lineId === null)) return;
+
+      setOrders((prev) =>
+        prev.map((o) => {
+          if ((o.table?._id || o.table) !== tableId) return o;
+          const nextItems = [...(o.items || [])];
+          if (nextItems[lineId]) {
+            nextItems[lineId] = { ...nextItems[lineId], notes: notes ?? "" };
+          }
+          return { ...o, items: nextItems };
+        })
+      );
     };
 
     socket.on("connect", () => {
       console.log("🔌 Socket bağlı:", socket.id);
     });
-
     socket.on("disconnect", () => {
       console.log("🔌 Socket bağlantısı kesildi");
     });
 
     socket.on("new-order", handleNewOrder);
     socket.on("order-completed", handleCompletedOrder);
+    socket.on("order-note-updated", handleOrderNoteUpdated);
 
     return () => {
       socket.off("new-order", handleNewOrder);
       socket.off("order-completed", handleCompletedOrder);
+      socket.off("order-note-updated", handleOrderNoteUpdated);
     };
   }, [playSound]);
 

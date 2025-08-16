@@ -1,4 +1,8 @@
 import axios from "axios";
 
-const tenantId = window.location.hostname.split('.')[0];
-axios.defaults.baseURL = `https://${tenantId}.emrcore.com.tr/api`;
+const host = window.location.hostname; // örn: demo.cafe.emrcore.com.tr
+const tenantId = host.split(".")[0];   // örn: demo
+
+axios.defaults.baseURL = `https://${tenantId}.cafe.emrcore.com.tr/api`;
+
+export default axios;
