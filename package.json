@@ -37,7 +37,7 @@
       "config/**/*"
     ],
     "asarUnpack": [
-      "electron/ip-config.json"
+      "electron/**"
     ],
     "extraResources": [
       { "from": "electron/ip-config.json", "to": "electron/ip-config.json" }

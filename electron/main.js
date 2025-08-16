@@ -29,11 +29,20 @@ function readJsonSafe(p) {
   }
 }
 
+function getUserTenantPath() {
+  return path.join(app.getPath("userData"), "tenant.json");
+}
+function saveTenantId(tenantId) {
+  const p = getUserTenantPath();
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, JSON.stringify({ tenantId }, null, 2), "utf8");
+}
+
 function readTenantId() {
   // 1) ENV
   if (isValidTenant(process.env.EMR_TENANT)) return process.env.EMR_TENANT.trim();
 
-  // 2) Paket ile gelen dosyalar (build’e koymak istersen)
+  // 2) Paket ile gelen dosyalar
   const candidateTenantFiles = [
     path.join(process.resourcesPath, "electron", "tenant.json"),
     path.join(process.resourcesPath, "app.asar.unpacked", "electron", "tenant.json"),
@@ -45,9 +54,8 @@ function readTenantId() {
     if (isValidTenant(t)) return t.trim();
   }
 
-  // 3) Kullanıcı verisi (runtime’da yazılabilir)
-  const userTenantPath = path.join(app.getPath("userData"), "tenant.json");
-  const userTenant = readJsonSafe(userTenantPath)?.tenantId;
+  // 3) Kullanıcı verisi (runtime)
+  const userTenant = readJsonSafe(getUserTenantPath())?.tenantId;
   if (isValidTenant(userTenant)) return userTenant.trim();
 
   return null;
@@ -87,6 +95,69 @@ function readServerBaseUrl() {
   // —— IP fallback YOK —— //
   return null;
 }
+
+// —— Tenant prompt (ilk kurulum) —— //
+function openTenantPromptWindow(parent) {
+  const prompt = new BrowserWindow({
+    parent,
+    modal: true,
+    width: 420,
+    height: 260,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false, // preload’da fs/path kullanabilelim
+    },
+  });
+
+  const html = `
+    <!doctype html>
+    <meta charset="utf-8">
+    <title>İşletme (Tenant) Ayarı</title>
+    <style>
+      body{font-family:sans-serif;margin:24px}
+      h2{margin:0 0 12px}
+      input{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px}
+      button{margin-top:12px;padding:10px 14px;border:0;border-radius:8px;background:#0ea5e9;color:#fff;cursor:pointer}
+      small{color:#666}
+    </style>
+    <h2>İşletme Adı (tenant)</h2>
+    <p><small>Örn: <b>demo</b> → <code>https://demo.cafe.emrcore.com.tr</code></small></p>
+    <input id="t" placeholder="demo" autofocus />
+    <button id="ok">Kaydet ve Yeniden Başlat</button>
+    <script>
+      const re=/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+      document.getElementById('ok').onclick = async () => {
+        const t = document.getElementById('t').value.trim();
+        if(!re.test(t)){ alert('Geçersiz tenant'); return; }
+        try{
+          await window.electronAPI.setTenant(t);
+          window.close();
+        }catch(e){ alert('Kaydetme hatası: '+e); }
+      };
+      window.addEventListener('keydown', (e) => { if(e.key==='Enter') document.getElementById('ok').click(); });
+    </script>
+  `;
+  prompt.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html));
+
+  prompt.on("closed", () => {
+    // Tenant yazıldıysa app'ı yeniden başlat
+    app.relaunch();
+    app.exit(0);
+  });
+}
+
+// IPC: renderer’dan tenant kaydetme
+ipcMain.handle("set-tenant", (_e, tenantId) => {
+  if (!isValidTenant(tenantId)) throw new Error("Geçersiz tenant");
+  saveTenantId(tenantId);
+  return true;
+});
 
 // —— Updater bağla —— //
 let win;
@@ -133,6 +204,7 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: false,             // ������ PRELOAD için önemli
       backgroundThrottling: false,
     },
   });
@@ -157,17 +229,8 @@ function createWindow() {
 
   const base = readServerBaseUrl();
   if (!base) {
-    dialog.showMessageBoxSync({
-      type: "error",
-      title: "Sunucu adresi bulunamadı",
-      message:
-        "Sunucu URL’i oluşturulamadı.\n" +
-        "- ip-config.json içinde 'serverUrl' ya da\n" +
-        "- 'serverUrlTemplate' (örn: https://{tenant}.cafe.emrcore.com.tr) belirtin.\n" +
-        "- Tenant kimliğini ENV (EMR_TENANT) ya da tenant.json ile sağlayın.",
-      buttons: ["Kapat"]
-    });
-    app.quit();
+    // Tenant yoksa önce modal ile iste
+    openTenantPromptWindow(win);
     return;
   }
 
