@@ -2,7 +2,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, globalShortcut } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { printReceipt, printKitchen } = require("./printer");
+const { printReceipt, printKitchen, openCashDrawer } = require("./printer"); // ������ kasa eklendi
 const { autoUpdater } = require("electron-updater");
 
 // —— Tek instance —— //
@@ -132,15 +132,15 @@ function openTenantPromptWindow(parent) {
     <button id="ok">Kaydet ve Yeniden Başlat</button>
     <script>
       const re=/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
-  document.getElementById('ok').onclick = async () => {
-    const t = document.getElementById('t').value.trim();
-    if(!re.test(t)){ alert('Geçersiz tenant'); return; }
-    try{
-      await window.electronAPI.setTenant(t);   // userData/tenant.json
-      window.electronAPI.setTenantLocal(t);    // localStorage (preload)
-      window.close();
-    }catch(e){ alert('Kaydetme hatası: '+e); }
-  };
+      document.getElementById('ok').onclick = async () => {
+        const t = document.getElementById('t').value.trim();
+        if(!re.test(t)){ alert('Geçersiz tenant'); return; }
+        try{
+          await window.electronAPI.setTenant(t);   // userData/tenant.json
+          window.electronAPI.setTenantLocal(t);    // localStorage (preload)
+          window.close();
+        }catch(e){ alert('Kaydetme hatası: '+e); }
+      };
       window.addEventListener('keydown', (e) => { if(e.key==='Enter') document.getElementById('ok').click(); });
     </script>
   `;
@@ -246,19 +246,40 @@ function createWindow() {
   }
 }
 
-// —— Yazdırma IPC’leri —— //
+// —— Yazdırma / Kasa IPC’leri —— //
+// HATA DURUMUNDA THROW ⇒ Renderer catch edip "cihaz tespit edilemedi" gösterebilsin
 ipcMain.handle("print-receipt", async (_event, data) => {
-  try { await printReceipt(data); }
-  catch (err) { console.error("Fiş yazdırılırken hata:", err); }
+  try {
+    await printReceipt(data);
+    return true;
+  } catch (err) {
+    console.error("Fiş yazdırılırken hata:", err);
+    throw err; // ������ önemli
+  }
 });
 
 ipcMain.handle("print-kitchen", async (_event, data) => {
-  try { await printKitchen(data); }
-  catch (err) { console.error("Mutfak fişi yazdırılırken hata:", err); }
+  try {
+    await printKitchen(data);
+    return true;
+  } catch (err) {
+    console.error("Mutfak fişi yazdırılırken hata:", err);
+    throw err; // ������ önemli
+  }
+});
+
+ipcMain.handle("open-cash-drawer", async () => {
+  try {
+    await openCashDrawer();
+    return true;
+  } catch (err) {
+    console.error("Kasa çekmecesi açma hatası:", err);
+    throw err; // ������ önemli
+  }
 });
 
 ipcMain.on("print-pdf", (_event, filePath) => {
-  // PDF yazdırma/önizleme işlemleri
+  // PDF yazdırma/önizleme işlemleri (isteğe bağlı)
 });
 
 // —— App lifecycle —— //

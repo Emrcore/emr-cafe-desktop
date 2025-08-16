@@ -112,13 +112,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Tenant yönetimi
   setTenant: (tenantId) => ipcRenderer.invoke("set-tenant", tenantId), // main.js'e kaydeder (userData/tenant.json)
-  setTenantLocal: (tenantId) => {                                      // UI’dan localStorage’a da yazmak istersen
-    try { if (isValidTenant(tenantId)) localStorage.setItem("tenantId", tenantId); } catch {}
+  setTenantLocal: (tenantId) => {
+    try {
+      if (isValidTenant(tenantId)) globalThis.localStorage?.setItem?.("tenantId", tenantId);
+    } catch {}
   },
 
   // Yazýcýlar
   printReceipt: (data) => ipcRenderer.invoke("print-receipt", data),
   printKitchen: (order) => ipcRenderer.invoke("print-kitchen", order),
+  openCashDrawer: () => ipcRenderer.invoke("open-cash-drawer"),   // ?? kasa açma eklendi
   printPDF: (filePath) => ipcRenderer.send("print-pdf", filePath),
 
   // Updater

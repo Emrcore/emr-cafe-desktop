@@ -13,6 +13,10 @@
     "axios": "^1.6.0",
     "electron-log": "^5.2.0",
     "electron-updater": "^6.6.2",
+    "escpos": "^3.0.0-alpha.6",
+    "escpos-network": "^3.0.0-alpha.5",
+    "escpos-usb": "^3.0.0-alpha.4",
+    "serialport": "^13.0.0",
     "socket.io-client": "^4.7.2",
     "uuid": "^11.1.0",
     "xlsx": "^0.18.5"
@@ -40,7 +44,10 @@
       "electron/**"
     ],
     "extraResources": [
-      { "from": "electron/ip-config.json", "to": "electron/ip-config.json" }
+      {
+        "from": "electron/ip-config.json",
+        "to": "electron/ip-config.json"
+      }
     ],
     "directories": {
       "buildResources": "assets",
@@ -55,7 +62,12 @@
     ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": [ "x64" ] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "artifactName": "EMR-Cafe-${version}-Setup.${ext}"
     },

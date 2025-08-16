@@ -22,6 +22,10 @@ export default function TableDetail() {
   const [addQty, setAddQty] = useState(1);
   const [addNote, setAddNote] = useState("");
 
+  // arama & kategori
+  const [query, setQuery] = useState("");
+  const [selectedCat, setSelectedCat] = useState("Tümü");
+
   useEffect(() => {
     if (!id || id === "undefined") {
       toast.error("Geçersiz masa!");
@@ -38,8 +42,8 @@ export default function TableDetail() {
           axios.get("/tables"),
         ]);
         setTable(t.data);
-        setProducts(p.data);
-        setAllTables(a.data);
+        setProducts(p.data || []);
+        setAllTables(a.data || []);
       } catch (e) {
         console.error(e);
         toast.error("Veriler yüklenemedi");
@@ -88,12 +92,64 @@ export default function TableDetail() {
     }
   };
 
+  /** -------------------------------
+   *  Yardımcılar: Fiş & Kasa
+   *  -------------------------------- */
+  const hasElectron = typeof window !== "undefined" && !!window.electronAPI;
+
+  const tryPrintReceipt = async (paymentMethod, totalAmount) => {
+    if (!hasElectron || typeof window.electronAPI.printReceipt !== "function") {
+      toast.error("⚠️ Fiş cihazı tespit edilemedi");
+      return;
+    }
+    try {
+      // Basit fiş verisi (backend/electron printer modülü ile uyumlu olacak)
+      const receipt = {
+        table: table?.name,
+        date: new Date().toISOString(),
+        paymentMethod,
+        items: (table?.orders || []).map((o) => ({
+          name: o.name,
+          qty: o.qty,
+          price: o.price,
+          total: Number(o.price) * Number(o.qty),
+          notes: o.notes || "",
+        })),
+        subtotal: (table?.orders || []).reduce((s, o) => s + o.price * o.qty, 0),
+        total: totalAmount,
+      };
+
+      await window.electronAPI.printReceipt(receipt);
+      toast.success("🖨️ Fiş yazdırıldı");
+    } catch (err) {
+      console.error("Print error:", err);
+      toast.error("⚠️ Fiş cihazı tespit edilemedi");
+    }
+  };
+
+  const tryOpenCashDrawer = async () => {
+    // Backend’de birazdan 'open-cash-drawer' IPC’sini ekleyeceğiz.
+    if (!hasElectron || typeof window.electronAPI.openCashDrawer !== "function") {
+      toast.error("⚠️ Kasa cihazı tespit edilemedi");
+      return;
+    }
+    try {
+      await window.electronAPI.openCashDrawer(); // args yok
+      toast.success("🗄️ Kasa açıldı");
+    } catch (err) {
+      console.error("Drawer error:", err);
+      toast.error("⚠️ Kasa cihazı tespit edilemedi");
+    }
+  };
+
   const handlePayment = async (method) => {
     try {
       const totalAmount = (table.orders || []).reduce(
         (sum, o) => sum + o.price * o.qty,
         0
       );
+
+      // Kart ise POS satış
       if (method === "kart") {
         const posRes = await axios.post("/pos/pay", {
           amount: totalAmount,
@@ -103,6 +159,7 @@ export default function TableDetail() {
           throw new Error(`POS hatası: ${posRes.data.error}`);
       }
 
+      // Masayı kapat ve satış yaz
       await axios.post(`/tables/${id}/pay`, { paymentMethod: method });
       await axios.post("/sales", {
         tableId: table.name,
@@ -114,6 +171,10 @@ export default function TableDetail() {
         total: totalAmount,
         paymentMethod: method,
       });
+
+      // Ödeme başarılı → fiş ve kasa işlemlerini dene (bağımsız uyarılar)
+      await tryPrintReceipt(method, totalAmount);
+      await tryOpenCashDrawer();
 
       toast.success("Ödeme alındı ve satış kaydedildi");
       navigate("/tables");
@@ -138,14 +199,48 @@ export default function TableDetail() {
     }
   };
 
-  const productsByCategory = useMemo(() => {
-    const groups = {};
+  // Kategoriler ve gruplama
+  const categories = useMemo(() => {
+    const counts = {};
     for (const p of products) {
+      const cat = p.category || "Diğer";
+      counts[cat] = (counts[cat] || 0) + 1;
+    }
+    // "Tümü" başa
+    return ["Tümü", ...Object.keys(counts).sort((a, b) => a.localeCompare(b, "tr"))]
+      .map((name) => ({
+        name,
+        count: name === "Tümü" ? products.length : products.filter(p => (p.category || "Diğer") === name).length
+      }));
+  }, [products]);
+
+  const productsByCategory = useMemo(() => {
+    // arama filtresi
+    const q = query.trim().toLowerCase();
+    const pool = q
+      ? products.filter((p) => p.name?.toLowerCase().includes(q))
+      : products;
+
+    // kategori filtresi
+    const filtered = selectedCat === "Tümü"
+      ? pool
+      : pool.filter((p) => (p.category || "Diğer") === selectedCat);
+
+    // gruplama
+    const groups = {};
+    for (const p of filtered) {
       const cat = p.category || "Diğer";
       (groups[cat] ||= []).push(p);
     }
+    // her kategoride isim sıralı
+    Object.values(groups).forEach(arr => arr.sort((a,b)=>a.name.localeCompare(b.name,"tr")));
     return groups;
-  }, [products]);
+  }, [products, query, selectedCat]);
+
+  const orderTotal = useMemo(() => {
+    if (!table?.orders?.length) return 0;
+    return table.orders.reduce((sum, o) => sum + o.price * o.qty, 0);
+  }, [table]);
 
   if (!table)
     return <p className="p-4 text-center text-white">Yükleniyor...</p>;
@@ -155,34 +250,84 @@ export default function TableDetail() {
       <BackButton />
       <h2 className="text-3xl font-bold mb-6">{table.name}</h2>
 
+      {/* Arama + Kategori çipleri */}
+      <div className="mb-6 space-y-3">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Ürün ara (örn: latte, ayran...)"
+          className="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:outline-none focus:border-sky-500"
+        />
+        <div className="flex gap-2 overflow-x-auto no-scrollbar">
+          {categories.map((c) => {
+            const active = selectedCat === c.name;
+            return (
+              <button
+                key={c.name}
+                onClick={() => setSelectedCat(c.name)}
+                className={[
+                  "whitespace-nowrap px-3 py-1.5 rounded-full text-sm border transition",
+                  active
+                    ? "bg-sky-600 border-sky-500"
+                    : "bg-slate-800 border-slate-700 hover:bg-slate-700"
+                ].join(" ")}
+                title={`${c.name} (${c.count})`}
+              >
+                {c.name} <span className="opacity-75">({c.count})</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Aktif Siparişler */}
       <h3 className="font-semibold mb-2">🧾 Aktif Siparişler</h3>
-      {table.orders.length === 0 && (
+      {(!table.orders || table.orders.length === 0) && (
         <p className="mb-4 text-sm text-slate-300">Henüz sipariş girilmedi.</p>
       )}
 
-      {table.orders.map((order, idx) => (
-        <div
-          key={`${order.id}-${idx}`}
-          className="flex justify-between items-center mb-2 bg-slate-700 px-4 py-2 rounded shadow"
-        >
-          <div>
-            <div className="font-medium">
-              {order.name} x{order.qty}
-            </div>
-            {order.notes ? (
-              <div className="text-xs mt-1 italic opacity-90">📝 {order.notes}</div>
-            ) : null}
-          </div>
-          <button
-            onClick={() => removeProduct(order)}
-            className="text-red-300 hover:text-red-500 text-sm"
+      {table.orders?.map((order, idx) => {
+        const lineTotal = (order.price || 0) * (order.qty || 0);
+        return (
+          <div
+            key={`${order.id}-${idx}`}
+            className="flex justify-between items-center mb-2 bg-slate-700 px-4 py-2 rounded shadow"
           >
-            Kaldır
-          </button>
-        </div>
-      ))}
+            <div>
+              <div className="font-medium">
+                {order.name}{" "}
+                <span className="text-slate-300">
+                  ({order.price?.toFixed ? order.price.toFixed(2) : order.price} ₺)
+                </span>{" "}
+                x{order.qty}
+              </div>
+              {order.notes ? (
+                <div className="text-xs mt-1 italic opacity-90">📝 {order.notes}</div>
+              ) : null}
+            </div>
 
-      {table.orders.length > 0 && (
+            <div className="flex items-center gap-4">
+              <div className="font-semibold">{lineTotal.toFixed(2)} ₺</div>
+              <button
+                onClick={() => removeProduct(order)}
+                className="text-red-300 hover:text-red-500 text-sm"
+              >
+                Kaldır
+              </button>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Toplam tutar */}
+      {table.orders?.length > 0 && (
+        <div className="mt-3 flex items-center justify-between bg-slate-800 border border-slate-700 rounded-lg px-4 py-3">
+          <div className="text-slate-300">Toplam</div>
+          <div className="text-xl font-bold">{orderTotal.toFixed(2)} ₺</div>
+        </div>
+      )}
+
+      {table.orders?.length > 0 && (
         <div className="mt-6 space-y-4">
           <div className="flex flex-wrap gap-4">
             <button
@@ -215,7 +360,7 @@ export default function TableDetail() {
               >
                 <option value="">Masa Seç</option>
                 {allTables
-                  .filter((t) => t._id !== id)
+                  .filter((t) => String(t._id) !== String(id))
                   .map((t) => (
                     <option key={t._id} value={t._id}>
                       {t.name}
@@ -241,7 +386,13 @@ export default function TableDetail() {
         </div>
       )}
 
+      {/* Ürünler */}
       <h3 className="mt-10 mb-4 font-semibold text-xl">📦 Ürün Ekle</h3>
+
+      {Object.keys(productsByCategory).length === 0 && (
+        <p className="text-sm text-slate-300">Eşleşen ürün bulunamadı.</p>
+      )}
+
       {Object.entries(productsByCategory).map(([categoryName, items]) => (
         <div key={categoryName} className="mb-6">
           <h4 className="text-lg font-bold mb-2">{categoryName}</h4>
@@ -258,7 +409,9 @@ export default function TableDetail() {
                   className="w-20 h-20 object-cover rounded mb-2"
                 />
                 <div className="font-medium text-white">{p.name}</div>
-                <div className="text-sm text-slate-400">{p.price} ₺</div>
+                <div className="text-sm text-slate-400">
+                  {Number(p.price).toFixed(2)} ₺
+                </div>
               </button>
             ))}
           </div>

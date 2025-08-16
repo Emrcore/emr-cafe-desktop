@@ -1,0 +1,18 @@
+{
+  "transport": "usb",          // "usb" | "network"
+  "encoding": "cp858",         // Türkçe için çoðu Epson/Bixolon'da iyi çalýþýr; alternatif: "cp857"
+  "width": 42,                 // satýr geniþliði (karakter)
+  "usb": {
+    "vendorId": 1208,          // örn: 0x04B8 (Epson) = 1208 decimal
+    "productId": 8200          // örnek id, 'lsusb' ile bak
+  },
+  "network": {
+    "host": "192.168.1.50",
+    "port": 9100
+  },
+  "pulse": {                   // cash drawer
+    "pin": 2,                  // 2 veya 5 (yazýcýna göre)
+    "on": 120,                 // ms
+    "off": 240                 // ms
+  }
+}
