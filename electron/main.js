@@ -2,7 +2,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, globalShortcut } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { printReceipt, printKitchen, openCashDrawer } = require("./printer"); // í ½í±ˆ kasa eklendi
+const { printReceipt, printKitchen, openCashDrawer } = require("./printer"); // kasa eklendi
 const { autoUpdater } = require("electron-updater");
 
 // â€”â€” Tek instance â€”â€” //
@@ -97,6 +97,8 @@ function readServerBaseUrl() {
 }
 
 // â€”â€” Tenant prompt (ilk kurulum) â€”â€” //
+let _tenantJustSaved = false; // í ½í±ˆ gerÃ§ekten kaydedildi mi?
+
 function openTenantPromptWindow(parent) {
   const prompt = new BrowserWindow({
     parent,
@@ -147,9 +149,11 @@ function openTenantPromptWindow(parent) {
   prompt.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html));
 
   prompt.on("closed", () => {
-    // Tenant yazÄ±ldÄ±ysa app'Ä± yeniden baÅŸlat
-    app.relaunch();
-    app.exit(0);
+    // Sadece tenant gerÃ§ekten kaydedildiyse yeniden baÅŸlat
+    if (_tenantJustSaved) {
+      app.relaunch();
+      app.exit(0);
+    }
   });
 }
 
@@ -157,6 +161,7 @@ function openTenantPromptWindow(parent) {
 ipcMain.handle("set-tenant", (_e, tenantId) => {
   if (!isValidTenant(tenantId)) throw new Error("GeÃ§ersiz tenant");
   saveTenantId(tenantId);
+  _tenantJustSaved = true; // í ½í±ˆ relaunch iÃ§in iÅŸaretle
   return true;
 });
 
@@ -205,7 +210,7 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,             // í ½í±ˆ PRELOAD iÃ§in Ã¶nemli
+      sandbox: false,             // PRELOAD iÃ§in Ã¶nemli
       backgroundThrottling: false,
     },
   });
@@ -254,7 +259,7 @@ ipcMain.handle("print-receipt", async (_event, data) => {
     return true;
   } catch (err) {
     console.error("FiÅŸ yazdÄ±rÄ±lÄ±rken hata:", err);
-    throw err; // í ½í±ˆ Ã¶nemli
+    throw err; // Ã¶nemli
   }
 });
 
@@ -264,7 +269,7 @@ ipcMain.handle("print-kitchen", async (_event, data) => {
     return true;
   } catch (err) {
     console.error("Mutfak fiÅŸi yazdÄ±rÄ±lÄ±rken hata:", err);
-    throw err; // í ½í±ˆ Ã¶nemli
+    throw err; // Ã¶nemli
   }
 });
 
@@ -274,7 +279,7 @@ ipcMain.handle("open-cash-drawer", async () => {
     return true;
   } catch (err) {
     console.error("Kasa Ã§ekmecesi aÃ§ma hatasÄ±:", err);
-    throw err; // í ½í±ˆ Ã¶nemli
+    throw err; // Ã¶nemli
   }
 });
 
